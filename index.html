@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Causal Insights - Boutique Data Science Consultancy</title>
+  <meta name="description" content="Causal Insights is a boutique Data Science consultancy focused on solving complex business problems with custom algorithms and AI agents.">
+  <!-- Google Fonts (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Base styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #0D1117;
+      color: #F2F2F2;
+      scroll-behavior: smooth;
+    }
+    /* Header styles */
+    header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(13, 17, 23, 0.9);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      z-index: 1000;
+    }
+    .logo img {
+      height: 40px;
+      /* Always use the dark-background version of the logo */
+    }
+    nav a {
+      color: #F2F2F2;
+      text-decoration: none;
+      margin-left: 20px;
+      font-weight: 600;
+    }
+    nav a:hover {
+      text-decoration: underline;
+      color: #22BABB;
+    }
+    /* Hero Section */
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .hero h1 {
+      font-size: 3em;
+      font-weight: 600;
+      margin: 0.2em 0;
+    }
+    .hero p {
+      font-size: 1.2em;
+      max-width: 600px;
+      font-weight: 400;
+    }
+    /* Generic section styles */
+    .section {
+      padding: 80px 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .section h2 {
+      font-size: 2em;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    /* Service Cards */
+    .service-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-around;
+    }
+    .service-card {
+      background: #1E2228;
+      padding: 20px;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 250px;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;
+      text-align: center;
+    }
+    .service-card h3 {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin-top: 0;
+    }
+    .service-card p {
+      font-size: 1em;
+      font-weight: 400;
+    }
+    /* Form styles */
+    form {
+      background: #1E2228;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #121619;
+      color: #F2F2F2;
+      font-family: inherit;
+    }
+    button {
+      background-color: #178A8B;
+      color: #F2F2F2;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    button:hover {
+      background-color: #22BABB;
+    }
+    /* Footer */
+    footer {
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+      background: #0D1117;
+    }
+    /* Fade-in animation on scroll */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+      }
+      nav a {
+        margin: 10px 0;
+      }
+      .service-cards {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed Header -->
+  <header>
+    <div class="logo">
+      <!-- Replace 'logo-dark.png' with the path to your actual logo file -->
+      <img src="logo-dark.png" alt="Causal Insights Logo">
+    </div>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#services">Services</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero fade-in" id="hero">
+    <h1>Causal Insights</h1>
+    <p>A boutique Data Science consultancy focused on helping clients solve complex business problems with custom algorithms and AI agents.</p>
+  </section>
+
+  <!-- About Section -->
+  <section class="section fade-in" id="about">
+    <h2>About Us</h2>
+    <p>
+      Causal Insights is a boutique consultancy dedicated to turning data into actionable insights. We combine deep expertise in data science, custom algorithm development, and artificial intelligence to drive smarter business decisions.
+    </p>
+    <p>
+      Our unique approach blends technical excellence with a deep understanding of your business challenges, delivering tailored solutions that yield measurable results.
+    </p>
+  </section>
+
+  <!-- Services Section -->
+  <section class="section fade-in" id="services">
+    <h2>Our Services</h2>
+    <div class="service-cards">
+      <div class="service-card">
+        <h3>Custom Algorithms</h3>
+        <p>
+          Tailored algorithmic solutions designed to address your unique business challenges.
+        </p>
+      </div>
+      <div class="service-card">
+        <h3>AI Agents &amp; Automation</h3>
+        <p>
+          Leverage intelligent automation and AI-driven strategies to optimize processes and drive innovation.
+        </p>
+      </div>
+      <div class="service-card">
+        <h3>Causal Inference &amp; Decision Intelligence</h3>
+        <p>
+          Transform data into insights with advanced causal inference techniques and decision-making tools.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="section fade-in" id="contact">
+    <h2>Contact Us</h2>
+    <form action="https://formspree.io/f/your-form-id" method="POST">
+      <label>
+        Your name:<br />
+        <input type="text" name="name" required />
+      </label>
+      <label>
+        Your email:<br />
+        <input type="email" name="_replyto" required />
+      </label>
+      <label>
+        Message:<br />
+        <textarea name="message" rows="5" required></textarea>
+      </label>
+      <br />
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2025 Causal Insights. All rights reserved.</p>
+  </footer>
+
+  <!-- Fade-In on Scroll Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const faders = document.querySelectorAll('.fade-in');
+      const appearOptions = { threshold: 0.1 };
+      const appearOnScroll = new IntersectionObserver(function(entries, observer) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, appearOptions);
+      faders.forEach(function(fader) {
+        appearOnScroll.observe(fader);
+      });
+    });
+  </script>
+</body>
+</html>
