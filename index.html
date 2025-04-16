@@ -3,27 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Causal Insights - Boutique Data Science Consultancy</title>
+  <title>Causal Insights – Boutique Data Science Consultancy</title>
   <meta name="description" content="Causal Insights is a boutique Data Science consultancy focused on solving complex business problems with custom algorithms and AI agents.">
   <!-- Google Fonts (Inter) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <!-- tsParticles for the interactive background -->
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.11.1/tsparticles.bundle.min.js" defer></script>
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
     /* Base styles */
     body {
       margin: 0;
-      padding: 0;
+      padding-top: 100px; /* ensure content sits below fixed header */
       font-family: 'Inter', sans-serif;
       background-color: #0D1117;
       color: #F2F2F2;
       scroll-behavior: smooth;
     }
-    /* Header styles */
+
+    /* Header */
     header {
       position: fixed;
       top: 0;
-      width: 100%;
+      left: 0;
+      right: 0;
       background: rgba(13, 17, 23, 0.9);
       display: flex;
       justify-content: space-between;
@@ -32,8 +39,7 @@
       z-index: 1000;
     }
     .logo img {
-      height: 40px;
-      /* Always use the dark-background version of the logo */
+      height: 100px; /* increased logo */
     }
     nav a {
       color: #F2F2F2;
@@ -45,38 +51,50 @@
       text-decoration: underline;
       color: #22BABB;
     }
+
+    /* Particle background */
+    #tsparticles {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: -1;
+    }
+
     /* Hero Section */
     .hero {
-      height: 100vh;
+      height: 75vh; /* compressed from 100vh */
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
       padding: 0 20px;
+      position: relative;
     }
     .hero h1 {
-      font-size: 3em;
+      font-size: 3.5em; /* larger */
       font-weight: 600;
       margin: 0.2em 0;
     }
     .hero p {
-      font-size: 1.2em;
+      font-size: 1.3em; /* slightly bigger */
       max-width: 600px;
       font-weight: 400;
     }
-    /* Generic section styles */
+
+    /* Sections */
     .section {
-      padding: 80px 20px;
+      padding: 60px 20px; /* reduced from 80px */
       max-width: 1000px;
       margin: 0 auto;
     }
     .section h2 {
-      font-size: 2em;
+      font-size: 2.5em; /* larger */
       font-weight: 600;
       text-align: center;
       margin-bottom: 20px;
     }
+
     /* Service Cards */
     .service-cards {
       display: flex;
@@ -90,11 +108,11 @@
       border-radius: 8px;
       flex: 1;
       min-width: 250px;
-      box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;
+      box-shadow: rgba(0,0,0,0.1) 0px 2px 8px;
       text-align: center;
     }
     .service-card h3 {
-      font-size: 1.5em;
+      font-size: 1.75em; /* larger */
       font-weight: 600;
       margin-top: 0;
     }
@@ -102,12 +120,13 @@
       font-size: 1em;
       font-weight: 400;
     }
-    /* Form styles */
+
+    /* Contact Form */
     form {
       background: #1E2228;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;
+      box-shadow: rgba(0,0,0,0.1) 0px 2px 8px;
       max-width: 500px;
       margin: 0 auto;
     }
@@ -138,14 +157,8 @@
     button:hover {
       background-color: #22BABB;
     }
-    /* Footer */
-    footer {
-      padding: 20px;
-      text-align: center;
-      font-size: 14px;
-      background: #0D1117;
-    }
-    /* Fade-in animation on scroll */
+
+    /* Fade-in */
     .fade-in {
       opacity: 0;
       transform: translateY(20px);
@@ -155,7 +168,16 @@
       opacity: 1;
       transform: translateY(0);
     }
-    /* Responsive adjustments */
+
+    /* Footer */
+    footer {
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+      background: #0D1117;
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
       header {
         flex-direction: column;
@@ -171,10 +193,12 @@
   </style>
 </head>
 <body>
-  <!-- Fixed Header -->
+  <!-- Particle canvas -->
+  <div id="tsparticles"></div>
+
+  <!-- Header -->
   <header>
     <div class="logo">
-      <!-- Replace 'logo-dark.png' with the path to your actual logo file -->
       <img src="logo-dark.png" alt="Causal Insights Logo">
     </div>
     <nav>
@@ -184,66 +208,46 @@
     </nav>
   </header>
 
-  <!-- Hero Section -->
+  <!-- Hero -->
   <section class="hero fade-in" id="hero">
     <h1>Causal Insights</h1>
     <p>A boutique Data Science consultancy focused on helping clients solve complex business problems with custom algorithms and AI agents.</p>
   </section>
 
-  <!-- About Section -->
+  <!-- About -->
   <section class="section fade-in" id="about">
     <h2>About Us</h2>
-    <p>
-      Causal Insights is a boutique consultancy dedicated to turning data into actionable insights. We combine deep expertise in data science, custom algorithm development, and artificial intelligence to drive smarter business decisions.
-    </p>
-    <p>
-      Our unique approach blends technical excellence with a deep understanding of your business challenges, delivering tailored solutions that yield measurable results.
-    </p>
+    <p>Causal Insights is a boutique consultancy dedicated to turning data into actionable insights. We combine deep expertise in data science, custom algorithm development, and artificial intelligence to drive smarter business decisions.</p>
+    <p>Our unique approach blends technical excellence with a deep understanding of your business challenges, delivering tailored solutions that yield measurable results.</p>
   </section>
 
-  <!-- Services Section -->
+  <!-- Services -->
   <section class="section fade-in" id="services">
     <h2>Our Services</h2>
     <div class="service-cards">
       <div class="service-card">
         <h3>Custom Algorithms</h3>
-        <p>
-          Tailored algorithmic solutions designed to address your unique business challenges.
-        </p>
+        <p>Tailored algorithmic solutions designed to address your unique business challenges.</p>
       </div>
       <div class="service-card">
         <h3>AI Agents &amp; Automation</h3>
-        <p>
-          Leverage intelligent automation and AI-driven strategies to optimize processes and drive innovation.
-        </p>
+        <p>Leverage intelligent automation and AI‐driven strategies to optimize processes and drive innovation.</p>
       </div>
       <div class="service-card">
         <h3>Causal Inference &amp; Decision Intelligence</h3>
-        <p>
-          Transform data into insights with advanced causal inference techniques and decision-making tools.
-        </p>
+        <p>Transform data into insights with advanced causal inference techniques and decision‐making tools.</p>
       </div>
     </div>
   </section>
 
-  <!-- Contact Section -->
+  <!-- Contact -->
   <section class="section fade-in" id="contact">
     <h2>Contact Us</h2>
     <form action="https://formspree.io/f/your-form-id" method="POST">
-      <label>
-        Your name:<br />
-        <input type="text" name="name" required />
-      </label>
-      <label>
-        Your email:<br />
-        <input type="email" name="_replyto" required />
-      </label>
-      <label>
-        Message:<br />
-        <textarea name="message" rows="5" required></textarea>
-      </label>
-      <br />
-      <button type="submit">Send</button>
+      <label>Your name:<br /><input type="text" name="name" required /></label>
+      <label>Your email:<br /><input type="email" name="_replyto" required /></label>
+      <label>Message:<br /><textarea name="message" rows="5" required></textarea></label>
+      <br /><button type="submit">Send</button>
     </form>
   </section>
 
@@ -252,21 +256,58 @@
     <p>&copy; 2025 Causal Insights. All rights reserved.</p>
   </footer>
 
-  <!-- Fade-In on Scroll Script -->
+  <!-- Scripts -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fade‑in on scroll
       const faders = document.querySelectorAll('.fade-in');
-      const appearOptions = { threshold: 0.1 };
-      const appearOnScroll = new IntersectionObserver(function(entries, observer) {
-        entries.forEach(function(entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-            observer.unobserve(entry.target);
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            observer.unobserve(e.target);
           }
         });
-      }, appearOptions);
-      faders.forEach(function(fader) {
-        appearOnScroll.observe(fader);
+      }, { threshold: 0.1 });
+      faders.forEach(f => observer.observe(f));
+
+      // tsParticles init
+      tsParticles.load('tsparticles', {
+        fpsLimit: 60,
+        background: { color: '#0D1117' },
+        particles: {
+          number: { value: 60, density: { enable: true, area: 800 } },
+          color: { value: '#178A8B' },
+          shape: { type: 'circle' },
+          opacity: { value: 0.6 },
+          size: { value: { min: 1, max: 6 } }, // variable sizes
+          links: {
+            enable: true,
+            distance: 120,
+            color: '#178A8B',
+            opacity: 0.4,
+            width: 1
+          },
+          move: {
+            enable: true,
+            speed: 1.2,              // slowed by 20%
+            outModes: { default: 'bounce' },
+            bounce: true
+          },
+          collisions: { enable: true }
+        },
+        interactivity: {
+          detectsOn: 'canvas',
+          events: {
+            onHover: { enable: true, mode: 'grab' },
+            onClick: { enable: true, mode: 'repulse' }
+          },
+          modes: {
+            grab: { distance: 140, links: { opacity: 0.5 } },
+            repulse: { distance: 100, duration: 0.4 }
+          }
+        },
+        detectRetina: true
       });
     });
   </script>
