@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Garden Box Planner v3 - Enhanced UX</title>
+    <style>
+        /* --- Basic Styles (Keep mostly the same) --- */
+        body {
+            font-family: sans-serif; margin: 0; display: flex;
+            height: 100vh; overflow: hidden; background-color: #f0f0f0;
+        }
+        #sidebar {
+            width: 250px; padding: 15px; background-color: #e9e9e9;
+            overflow-y: auto; border-right: 1px solid #ccc; display: flex;
+            flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Subtle shadow */
+            z-index: 10; /* Ensure sidebar is above canvas labels if needed */
+        }
+        #sidebar h2, #sidebar h3 {
+            margin-top: 0; margin-bottom: 10px; color: #333;
+            border-bottom: 1px solid #ddd; padding-bottom: 5px;
+        }
+        #controls {
+            margin-bottom: 15px; padding-bottom: 10px;
+        }
+        #delete-mode-btn {
+            padding: 8px 12px; background-color: #f8f8f8; border: 1px solid #ccc;
+            border-radius: 4px; cursor: pointer; width: 100%;
+            margin-bottom: 10px; transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+        }
+        #delete-mode-btn.active {
+            background-color: #ffe0e0; border-color: #e55;
+            color: #a00; font-weight: bold;
+        }
+        #plant-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        #plant-list li {
+            padding: 8px; margin-bottom: 5px; background-color: #fff;
+            border: 1px solid #ddd; border-radius: 4px; cursor: grab;
+            display: flex; align-items: center; user-select: none;
+             transition: background-color 0.1s;
+        }
+         #plant-list li:hover { background-color: #f5f5f5; } /* Hover feedback */
+        #plant-list li:active { cursor: grabbing; background-color: #e0e0e0; }
+        .plant-icon {
+            width: 20px; height: 20px; border-radius: 50%; margin-right: 10px;
+            display: inline-block; vertical-align: middle;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+        .plant-info { font-size: 0.9em; color: #555; margin-left: auto;} /* Push to right */
+
+        #calculations {
+            margin-top: auto; border-top: 1px solid #ccc; padding-top: 15px;
+        }
+        #calculations p, #calculations label { margin: 5px 0; font-size: 0.9em; }
+        #calculations input { width: 50px; margin-left: 5px; padding: 3px; border: 1px solid #ccc; border-radius: 3px; }
+        #calculations span { font-weight: bold; color: #333; }
+
+        /* --- Canvas and Label Styles --- */
+        #canvas-container {
+            flex-grow: 1; position: relative;
+            background-color: #a0d4a0; /* Lighter green "grass" background */
+            cursor: default;
+        }
+        #garden-canvas { display: block; width: 100%; height: 100%; }
+        .segment-label, .plant-label { /* Combine common styles */
+            position: absolute; background-color: rgba(0, 0, 0, 0.65);
+            color: white; padding: 2px 5px; font-size: 10px;
+            border-radius: 3px; pointer-events: none; white-space: nowrap;
+            backdrop-filter: blur(1px); /* Slight blur for better readability */
+        }
+        .segment-label { transform: translate(-50%, -50%); }
+        .plant-label { transform: translate(-50%, -150%); font-weight: bold; }
+
+         /* Style for draggable plant footprints */
+         /* Hover/active state handled by JS changing material */
+
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div id="controls">
+            <h3>Controls</h3>
+            <button id="delete-mode-btn">Toggle Delete Mode</button>
+        </div>
+        <h2>Plants</h2>
+        <ul id="plant-list"></ul>
+        <div id="calculations">
+            <h3>Box Info</h3>
+            <p>Total Area: <span id="total-area">0.00</span> sq ft</p>
+            <p>Available Area: <span id="available-area">0.00</span> sq ft</p>
+            <div>
+                <label for="soil-depth">Soil Depth (in):</label>
+                <input type="number" id="soil-depth" value="12" min="1" step="1">
+            </div>
+            <p>Soil Needed: <span id="soil-needed">0.00</span> cu ft</p>
+            <p>Mulch Needed (3in): <span id="mulch-needed">0.00</span> cu ft</p>
+        </div>
+    </div>
+    <div id="canvas-container">
+        <canvas id="garden-canvas"></canvas>
+        <div id="segment-labels"></div>
+        <div id="plant-labels"></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- Constants & Config ---
+        const FEET_TO_WORLD_UNITS = 10;
+        const PLANT_Z_POSITION = 0.1;
+        const BOX_OUTLINE_Z = 0.05; // Outline slightly above fill
+        const BOX_FILL_Z = 0.0;     // Fill at Z=0
+        const HANDLE_SIZE = 0.4 * FEET_TO_WORLD_UNITS;
+        const DEFAULT_SOIL_DEPTH_INCHES = 12;
+        const MULCH_DEPTH_FEET = 3 / 12;
+        const PLANT_FOOTPRINT_OPACITY = 0.6; // Slightly increased opacity
+        const HOVER_BRIGHTNESS_FACTOR = 0.3; // How much brighter on hover
+        const DELETE_MODE_TINT_COLOR = new THREE.Color(0xff0000); // Red tint for delete mode
+        const DELETE_MODE_TINT_INTENSITY = 0.3; // Intensity of red tint
+
+        // --- Plant Library (same as before) ---
+         const PLANT_LIBRARY = [
+            { name: "Zucchini", spacing: 2.5, color: 0x006400 }, { name: "Cherry Tomato", spacing: 2.0, color: 0xFF0000 },
+            { name: "Cucumber", spacing: 1.5, color: 0x90EE90 }, { name: "Pepper", spacing: 1.5, color: 0xFFA500 },
+            { name: "Onion", spacing: 0.5, color: 0xD2B48C }, { name: "Basil", spacing: 1.0, color: 0x32CD32 },
+            { name: "Kale", spacing: 1.5, color: 0x2E8B57 }, { name: "Rosemary", spacing: 2.0, color: 0x708090 },
+            { name: "Marigold", spacing: 1.0, color: 0xFFD700 },
+        ];
+
+        // --- Global State ---
+        let scene, camera, renderer, raycaster, pointer;
+        let gardenVertices = [];
+        // Now storing original material state within the plant object
+        let placedPlants = []; // Array of { id, data, position, mesh, labelElement, originalMaterialState: { color, emissive } }
+        let boxLine, vertexHandles = [];
+        let boxFillMesh; // NEW: Mesh for the garden box interior fill
+        let segmentLabelElements = [];
+        let plantLabelElements = [];
+        let isDraggingVertex = false, draggedVertexIndex = -1;
+        let isDraggingPlant = false, draggedPlantInfo = null, draggedPlantOffset = new THREE.Vector3();
+        let draggedPlantData = null;
+        let nextPlantId = 0;
+        let isDeleteMode = false;
+        let currentlyHoveredPlant = null; // NEW: Track hovered plant for highlighting
+
+        // --- DOM Elements (same as before) ---
+        const canvas = document.getElementById('garden-canvas');
+        const canvasContainer = document.getElementById('canvas-container');
+        const plantListElement = document.getElementById('plant-list');
+        const segmentLabelsContainer = document.getElementById('segment-labels');
+        const plantLabelsContainer = document.getElementById('plant-labels');
+        const totalAreaElement = document.getElementById('total-area');
+        const availableAreaElement = document.getElementById('available-area');
+        const soilDepthInputElement = document.getElementById('soil-depth');
+        const soilNeededElement = document.getElementById('soil-needed');
+        const mulchNeededElement = document.getElementById('mulch-needed');
+        const deleteModeButton = document.getElementById('delete-mode-btn');
+
+        // --- Initialization ---
+        function init() {
+            setupScene();
+            setupSidebar();
+            setupInitialGardenBox(); // Will now also create the fill mesh
+            setupEventListeners();
+            updateCalculations();
+            animate();
+        }
+
+        function setupScene() {
+            scene = new THREE.Scene();
+            // Use a slightly less saturated blue for the background "sky"
+            scene.background = new THREE.Color(0xcce6ff);
+
+            const aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            const frustumSize = 20 * FEET_TO_WORLD_UNITS;
+            camera = new THREE.OrthographicCamera(
+                frustumSize * aspect / -2, frustumSize * aspect / 2,
+                frustumSize / 2, frustumSize / -2, 1, 1000
+            );
+            camera.position.set(0, 0, 50);
+            camera.lookAt(scene.position);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Slightly brighter ambient
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6); // Slightly stronger directional
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+
+            raycaster = new THREE.Raycaster();
+            pointer = new THREE.Vector2();
+
+            // Remove the large ground plane, the container bg color serves as "outside"
+            // const groundGeometry = new THREE.PlaneGeometry(...)
+            // scene.add(groundPlane);
+        }
+
+        function setupSidebar() { // Mostly the same, added hover style via CSS
+             PLANT_LIBRARY.forEach(plant => {
+                const li = document.createElement('li');
+                li.draggable = true;
+                li.dataset.plantName = plant.name;
+
+                const icon = document.createElement('span');
+                icon.className = 'plant-icon';
+                icon.style.backgroundColor = `#${plant.color.toString(16).padStart(6, '0')}`;
+                li.appendChild(icon);
+
+                const text = document.createElement('span');
+                text.textContent = plant.name; // Just name, spacing on right
+                li.appendChild(text);
+
+                const info = document.createElement('span');
+                info.className = 'plant-info';
+                info.textContent = `(${plant.spacing} ft)`;
+                li.appendChild(info);
+
+                li.addEventListener('dragstart', (event) => {
+                    if (isDeleteMode) { event.preventDefault(); return; }
+                    draggedPlantData = plant;
+                    event.dataTransfer.setData('text/plain', plant.name);
+                    event.dataTransfer.effectAllowed = 'copy';
+                    // Optional: Add a class to the body for visual feedback during drag?
+                    // document.body.classList.add('dragging-plant');
+                });
+                 li.addEventListener('dragend', () => {
+                    draggedPlantData = null;
+                    // document.body.classList.remove('dragging-plant');
+                });
+                plantListElement.appendChild(li);
+            });
+             deleteModeButton.addEventListener('click', toggleDeleteMode);
+        }
+
+        function setupInitialGardenBox() {
+            const w = 4 * FEET_TO_WORLD_UNITS;
+            const h = 8 * FEET_TO_WORLD_UNITS;
+            gardenVertices = [
+                new THREE.Vector3(-w / 2, -h / 2, 0), new THREE.Vector3( w / 2, -h / 2, 0),
+                new THREE.Vector3( w / 2,  h / 2, 0), new THREE.Vector3(-w / 2,  h / 2, 0),
+            ];
+            drawGardenBoxOutline(); // Renamed from drawGardenBox
+            drawGardenBoxFill();    // NEW: Draw the interior
+            updateVertexHandles();
+            updateSegmentLabels();
+        }
+
+        function setupEventListeners() { // Same as before
+            canvasContainer.addEventListener('pointerdown', onPointerDown);
+            canvasContainer.addEventListener('pointermove', onPointerMove);
+            canvasContainer.addEventListener('pointerup', onPointerUp);
+            canvasContainer.addEventListener('pointerleave', onPointerUp); // Handle leaving canvas
+            canvasContainer.addEventListener('dragover', (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
+            canvasContainer.addEventListener('drop', onDrop);
+            window.addEventListener('resize', onWindowResize);
+            soilDepthInputElement.addEventListener('input', updateCalculations);
+        }
+
+        // --- Drawing Functions ---
+
+        function drawGardenBoxOutline() {
+            if (boxLine) scene.remove(boxLine);
+            const points = [...gardenVertices, gardenVertices[0]];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            // Slightly thicker, darker line for better definition
+            const material = new THREE.LineBasicMaterial({ color: 0x543a24, linewidth: 3 });
+            boxLine = new THREE.Line(geometry, material);
+            boxLine.position.z = BOX_OUTLINE_Z; // Raise outline slightly above fill
+            scene.add(boxLine);
+        }
+
+        // NEW: Function to draw/update the garden box fill
+        function drawGardenBoxFill() {
+            if (boxFillMesh) {
+                 scene.remove(boxFillMesh);
+                 boxFillMesh.geometry.dispose();
+                 // Material is reused
+             }
+
+            if (gardenVertices.length < 3) return; // Need at least 3 vertices for a shape
+
+            const boxShape = new THREE.Shape();
+            boxShape.moveTo(gardenVertices[0].x, gardenVertices[0].y);
+            for (let i = 1; i < gardenVertices.length; i++) {
+                boxShape.lineTo(gardenVertices[i].x, gardenVertices[i].y);
+            }
+            boxShape.closePath();
+
+            const geometry = new THREE.ShapeGeometry(boxShape);
+            // Use a distinct "soil" color
+            const material = new THREE.MeshLambertMaterial({ color: 0x9b7653, side: THREE.DoubleSide });
+
+            boxFillMesh = new THREE.Mesh(geometry, material);
+            boxFillMesh.position.z = BOX_FILL_Z; // Position at ground level
+            scene.add(boxFillMesh);
+        }
+
+
+        function updateVertexHandles() { // Mostly same, position handles slightly above outline/fill
+            vertexHandles.forEach(handle => scene.remove(handle));
+            vertexHandles = [];
+            const handleGeometry = new THREE.SphereGeometry(HANDLE_SIZE / 2, 16, 16);
+             // Brighter blue, maybe slightly emissive for visibility
+            const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x2288ff });
+            gardenVertices.forEach((vertex, index) => {
+                const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+                handle.position.copy(vertex);
+                handle.position.z = BOX_OUTLINE_Z + 0.01; // Position slightly above outline
+                handle.userData = { type: 'vertex', index: index };
+                scene.add(handle);
+                vertexHandles.push(handle);
+            });
+        }
+
+        function updateSegmentLabels() { // Same logic, CSS handles appearance
+            segmentLabelsContainer.innerHTML = '';
+            segmentLabelElements = [];
+            for (let i = 0; i < gardenVertices.length; i++) {
+                const startPoint = gardenVertices[i];
+                const endPoint = gardenVertices[(i + 1) % gardenVertices.length];
+                const midPointWorld = new THREE.Vector3().addVectors(startPoint, endPoint).multiplyScalar(0.5);
+                midPointWorld.z = BOX_OUTLINE_Z; // Position labels relative to outline height
+                const screenPos = worldToScreen(midPointWorld);
+
+                if (screenPos && isOnScreen(screenPos)) {
+                    const lengthUnits = startPoint.distanceTo(endPoint);
+                    const lengthFeet = lengthUnits / FEET_TO_WORLD_UNITS;
+                    const labelText = formatFeetInches(lengthFeet);
+
+                    const label = document.createElement('div');
+                    label.className = 'segment-label';
+                    label.textContent = labelText;
+                    label.style.left = `${screenPos.x}px`;
+                    label.style.top = `${screenPos.y}px`;
+                    segmentLabelsContainer.appendChild(label);
+                    segmentLabelElements.push(label);
+                }
+            }
+        }
+
+         function updatePlantLabels() { // Same logic, CSS handles appearance
+            plantLabelsContainer.innerHTML = '';
+            plantLabelElements = [];
+            placedPlants.forEach(plant => {
+                const screenPos = worldToScreen(plant.position);
+                 if (screenPos && isOnScreen(screenPos)) {
+                    const label = document.createElement('div');
+                    label.className = 'plant-label';
+                    label.textContent = plant.data.name;
+                    label.style.left = `${screenPos.x}px`;
+                    label.style.top = `${screenPos.y}px`;
+                    plantLabelsContainer.appendChild(label);
+                    plant.labelElement = label;
+                    plantLabelElements.push(label);
+                 } else { plant.labelElement = null; }
+            });
+         }
+
+         function updateSinglePlantLabelPosition(plant) { // Same logic
+             if (plant.labelElement) {
+                 const screenPos = worldToScreen(plant.position);
+                 if (screenPos && isOnScreen(screenPos)) {
+                     plant.labelElement.style.left = `${screenPos.x}px`;
+                     plant.labelElement.style.top = `${screenPos.y}px`;
+                     plant.labelElement.style.display = '';
+                 } else { plant.labelElement.style.display = 'none'; }
+             }
+         }
+
+        // --- Interaction Handlers ---
+
+        function updatePointer(event) { // Same logic
+            const rect = canvas.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        function getMouseWorldPosition(event) { // Same logic, intersect plane at plant Z
+             updatePointer(event);
+             raycaster.setFromCamera(pointer, camera);
+             const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -PLANT_Z_POSITION);
+             const intersectPoint = new THREE.Vector3();
+             if (raycaster.ray.intersectPlane(plane, intersectPoint)) { return intersectPoint; }
+             return null;
+        }
+
+        function onPointerDown(event) { // Updated logic for selection/highlighting
+            if (event.button !== 0) return;
+            updatePointer(event);
+            raycaster.setFromCamera(pointer, camera);
+
+            // --- Check for Delete Mode ---
+            if (isDeleteMode) {
+                const targetPlant = getPlantUnderPointer();
+                if (targetPlant) {
+                    deletePlant(targetPlant);
+                    // Keep delete mode active after deleting one
+                }
+                return; // Don't process other interactions in delete mode after a click attempt
+            }
+
+            // --- Check for Plant Drag ---
+             // Prioritize plant interaction over vertex interaction
+            const targetPlant = getPlantUnderPointer();
+            if (targetPlant) {
+                isDraggingPlant = true;
+                draggedPlantInfo = targetPlant;
+                // Restore original material before applying dragging visual (if needed)
+                restorePlantMaterial(draggedPlantInfo);
+                // Optional: apply a specific "dragging" visual, e.g., slightly lift or scale
+                 // For now, just rely on cursor change
+
+                const worldPos = getMouseWorldPosition(event);
+                if (worldPos) {
+                    draggedPlantOffset.copy(worldPos).sub(draggedPlantInfo.position);
+                } else {
+                    draggedPlantOffset.set(0,0,0);
+                }
+                canvasContainer.style.cursor = 'grabbing';
+                // De-highlight any previously hovered plant when starting drag
+                if (currentlyHoveredPlant && currentlyHoveredPlant !== draggedPlantInfo) {
+                     restorePlantMaterial(currentlyHoveredPlant);
+                     currentlyHoveredPlant = null;
+                }
+                return; // Plant drag initiated
+            }
+
+
+            // --- Check for Vertex Drag ---
+            const intersectsVertices = raycaster.intersectObjects(vertexHandles);
+            if (intersectsVertices.length > 0) {
+                const handle = intersectsVertices[0].object;
+                if (handle.userData.type === 'vertex') {
+                    isDraggingVertex = true;
+                    draggedVertexIndex = handle.userData.index;
+                    canvasContainer.style.cursor = 'grabbing';
+                     // De-highlight any hovered plant when starting vertex drag
+                    if (currentlyHoveredPlant) {
+                        restorePlantMaterial(currentlyHoveredPlant);
+                        currentlyHoveredPlant = null;
+                    }
+                }
+            }
+        }
+
+
+        function onPointerMove(event) { // Updated logic for hover highlighting
+            const worldPos = getMouseWorldPosition(event);
+            if (!worldPos) {
+                 // If mouse leaves the plane, remove hover effect
+                if (currentlyHoveredPlant) {
+                    restorePlantMaterial(currentlyHoveredPlant);
+                    currentlyHoveredPlant = null;
+                }
+                return;
+            }
+
+            // --- Handle Plant Dragging ---
+            if (isDraggingPlant && draggedPlantInfo) {
+                const targetPos = worldPos.sub(draggedPlantOffset);
+                targetPos.z = PLANT_Z_POSITION;
+                draggedPlantInfo.mesh.position.copy(targetPos);
+                draggedPlantInfo.position.copy(targetPos);
+                updateSinglePlantLabelPosition(draggedPlantInfo);
+                 canvasContainer.style.cursor = 'grabbing';
+                return;
+            }
+
+            // --- Handle Vertex Dragging ---
+            if (isDraggingVertex && draggedVertexIndex !== -1) {
+                gardenVertices[draggedVertexIndex].x = worldPos.x;
+                gardenVertices[draggedVertexIndex].y = worldPos.y;
+                gardenVertices[draggedVertexIndex].z = 0;
+                // Update visuals dynamically during drag
+                drawGardenBoxOutline();
+                drawGardenBoxFill(); // Update fill shape too
+                updateVertexHandles(); // Handles follow vertices
+                updateSegmentLabels();
+                updatePlantLabels(); // Plant labels might shift on screen
+                updateCalculations();
+                 canvasContainer.style.cursor = 'grabbing';
+                 // Ensure no hover highlight during vertex drag
+                 if (currentlyHoveredPlant) {
+                    restorePlantMaterial(currentlyHoveredPlant);
+                    currentlyHoveredPlant = null;
+                 }
+
+            } else if (!isDraggingPlant) { // Only handle hover/cursor if NOT dragging anything
+                updatePointer(event);
+                raycaster.setFromCamera(pointer, camera);
+
+                const targetPlant = getPlantUnderPointer();
+                const targetVertexHandle = raycaster.intersectObjects(vertexHandles)[0]?.object;
+
+                // --- Handle Plant Hover Highlighting ---
+                if (targetPlant && !isDeleteMode) {
+                    if (currentlyHoveredPlant !== targetPlant) {
+                        // Restore previous hover if exists
+                        if (currentlyHoveredPlant) {
+                             restorePlantMaterial(currentlyHoveredPlant);
+                        }
+                        // Apply hover to new target
+                         highlightPlantMaterial(targetPlant);
+                        currentlyHoveredPlant = targetPlant;
+                    }
+                     canvasContainer.style.cursor = 'grab';
+                } else {
+                    // No plant hovered, or in delete mode (delete mode handles its own visuals)
+                    if (currentlyHoveredPlant) {
+                         restorePlantMaterial(currentlyHoveredPlant);
+                        currentlyHoveredPlant = null;
+                    }
+                    // Set cursor based on delete mode or vertex hover
+                    if (isDeleteMode && targetPlant) {
+                         canvasContainer.style.cursor = 'crosshair';
+                    } else if (!isDeleteMode && targetVertexHandle?.userData?.type === 'vertex') {
+                         canvasContainer.style.cursor = 'grab';
+                    } else {
+                         canvasContainer.style.cursor = 'default';
+                    }
+                }
+                 // Apply delete mode visual feedback dynamically on hover
+                 if(isDeleteMode){
+                     applyDeleteModeVisuals(targetPlant); // Highlight only the one under cursor in red
+                 }
+            }
+        }
+
+
+        function onPointerUp(event) { // Mostly same, ensure cleanup of highlights
+            if (event.button !== 0 && typeof event.button !== 'undefined') return;
+
+            if (isDraggingPlant && draggedPlantInfo) {
+                 // Final position check
+                 if (!isPointInPolygon(draggedPlantInfo.position, gardenVertices)) {
+                    // Use a less intrusive notification if possible, but alert is simple
+                    // E.g., show a temporary message on screen
+                     alert(`${draggedPlantInfo.data.name} was moved outside the box and removed.`);
+                    deletePlant(draggedPlantInfo, false); // Delete without toggling mode
+                 } else {
+                     // Plant is inside, ensure its material is reset if it had a special dragging visual
+                     // (Currently no special drag visual, hover handles reset)
+                     updateCalculations(); // Recalc area
+                     updateSinglePlantLabelPosition(draggedPlantInfo); // Final label pos
+                 }
+
+                isDraggingPlant = false;
+                draggedPlantInfo = null;
+                 // Re-evaluate hover state under cursor now that drag ended
+                 handleHoverStateAfterInteraction();
+            }
+
+            if (isDraggingVertex) {
+                isDraggingVertex = false;
+                draggedVertexIndex = -1;
+                 // Final updates after resize
+                 drawGardenBoxOutline(); // Ensure final shape is drawn
+                 drawGardenBoxFill();
+                 updateCalculations();
+                 checkPlantsInBounds(); // Remove plants outside
+                 // Re-evaluate hover state under cursor
+                 handleHoverStateAfterInteraction();
+            }
+            // Reset cursor if it wasn't reset by hover logic
+            if (!isDraggingPlant && !isDraggingVertex) {
+                 handleHoverStateAfterInteraction(); // Checks cursor and hover
+            }
+        }
+
+        // Helper to re-evaluate hover state after drag/resize ends
+        function handleHoverStateAfterInteraction() {
+            const targetPlant = getPlantUnderPointer();
+            const targetVertexHandle = raycaster.intersectObjects(vertexHandles)[0]?.object;
+
+            if (currentlyHoveredPlant && currentlyHoveredPlant !== targetPlant) {
+                 restorePlantMaterial(currentlyHoveredPlant);
+                 currentlyHoveredPlant = null;
+            }
+
+             if (targetPlant && !isDeleteMode) {
+                 if (!currentlyHoveredPlant) { // Apply hover if not already hovered
+                     highlightPlantMaterial(targetPlant);
+                     currentlyHoveredPlant = targetPlant;
+                 }
+                  canvasContainer.style.cursor = 'grab';
+             } else if (isDeleteMode && targetPlant) {
+                  canvasContainer.style.cursor = 'crosshair';
+                  applyDeleteModeVisuals(targetPlant); // Ensure delete tint is shown
+             } else if (!isDeleteMode && targetVertexHandle?.userData?.type === 'vertex') {
+                  canvasContainer.style.cursor = 'grab';
+             } else {
+                  canvasContainer.style.cursor = 'default';
+                  // Ensure delete mode visuals are removed if not hovering a plant in delete mode
+                  if (isDeleteMode) applyDeleteModeVisuals(null);
+             }
+         }
+
+
+        function onDrop(event) { // Mostly same, placement check simplified
+            event.preventDefault();
+            if (!draggedPlantData || isDeleteMode) return;
+
+            const worldPos = getMouseWorldPosition(event);
+            if (!worldPos) return;
+            worldPos.z = PLANT_Z_POSITION;
+
+            if (!isPointInPolygon(worldPos, gardenVertices)) {
+                alert("Plant must be placed inside the garden box.");
+                draggedPlantData = null;
+                return;
+            }
+            addPlantToPlot(draggedPlantData, worldPos);
+            draggedPlantData = null;
+        }
+
+        function addPlantToPlot(plantData, position) {
+            const plantId = nextPlantId++;
+            const plantRadius = (plantData.spacing / 2) * FEET_TO_WORLD_UNITS;
+            const geometry = new THREE.CircleGeometry(plantRadius, 32);
+
+            // Store original material properties separately for restoring hover/delete states
+            const originalColor = new THREE.Color(plantData.color);
+            const originalMaterialState = {
+                 colorHex: originalColor.getHex(),
+                 emissiveHex: 0x000000 // Default no emissive
+            };
+
+            const material = new THREE.MeshLambertMaterial({
+                color: originalColor,
+                transparent: true,
+                opacity: PLANT_FOOTPRINT_OPACITY,
+                side: THREE.DoubleSide,
+                emissive: originalMaterialState.emissiveHex // Start with no emission
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            mesh.userData = { type: 'plant', plantId: plantId };
+            scene.add(mesh);
+
+            const newPlant = {
+                id: plantId,
+                data: plantData,
+                position: position.clone(),
+                mesh: mesh,
+                labelElement: null,
+                originalMaterialState: originalMaterialState // Store base state
+            };
+            placedPlants.push(newPlant);
+
+            updatePlantLabels();
+            updateCalculations();
+
+             // Apply delete mode visuals if it's active when the plant is added
+             if (isDeleteMode) {
+                 applyDeleteModeVisualsToPlant(newPlant);
+             }
+        }
+
+        // --- Material/Visual State Functions ---
+
+        function highlightPlantMaterial(plantInfo) {
+             if (!plantInfo || !plantInfo.mesh || !plantInfo.mesh.material) return;
+             const material = plantInfo.mesh.material;
+             // Make it slightly brighter using emissive property
+             material.emissive.setHex(plantInfo.originalMaterialState.colorHex); // Use base color for emission
+             material.color.setHex(plantInfo.originalMaterialState.colorHex); // Ensure base color is set
+             material.emissiveIntensity = HOVER_BRIGHTNESS_FACTOR;
+             material.needsUpdate = true;
+        }
+
+        function restorePlantMaterial(plantInfo) {
+             if (!plantInfo || !plantInfo.mesh || !plantInfo.mesh.material) return;
+             const material = plantInfo.mesh.material;
+             const originalState = plantInfo.originalMaterialState;
+             // Only restore if not in delete mode (delete mode visuals take precedence)
+             if (!isDeleteMode) {
+                 material.color.setHex(originalState.colorHex);
+                 material.emissive.setHex(originalState.emissiveHex);
+                 material.emissiveIntensity = 1.0; // Default intensity
+                 material.needsUpdate = true;
+             } else {
+                  // If exiting hover WHILE in delete mode, reapply delete visual
+                  applyDeleteModeVisualsToPlant(plantInfo);
+             }
+        }
+
+        function applyDeleteModeVisuals(hoveredPlantInDeleteMode) {
+             // Apply delete visual styling to all plants, potentially highlighting the one under cursor
+             placedPlants.forEach(plant => {
+                 if (plant === hoveredPlantInDeleteMode) {
+                     // Make the one under cursor strongly tinted red
+                     plant.mesh.material.color.setHex(plant.originalMaterialState.colorHex); // Reset base color first
+                     plant.mesh.material.emissive.set(DELETE_MODE_TINT_COLOR);
+                     plant.mesh.material.emissiveIntensity = DELETE_MODE_TINT_INTENSITY * 1.5; // More intense hover
+                     plant.mesh.material.needsUpdate = true;
+                 } else {
+                      // Apply standard delete mode tint (less intense)
+                     applyDeleteModeVisualsToPlant(plant);
+                 }
+             });
+        }
+
+         function applyDeleteModeVisualsToPlant(plantInfo){
+             if (!plantInfo || !plantInfo.mesh || !plantInfo.mesh.material) return;
+             const material = plantInfo.mesh.material;
+              // Blend original color with red tint using emissive
+             material.color.setHex(plantInfo.originalMaterialState.colorHex); // Keep base color
+             material.emissive.set(DELETE_MODE_TINT_COLOR);
+             material.emissiveIntensity = DELETE_MODE_TINT_INTENSITY;
+             material.needsUpdate = true;
+         }
+
+
+        function removeDeleteModeVisuals() {
+             // Restore all plants to their original non-delete-mode state
+             placedPlants.forEach(plant => {
+                 if (plant.mesh && plant.mesh.material) {
+                     const material = plant.mesh.material;
+                     const originalState = plant.originalMaterialState;
+                     material.color.setHex(originalState.colorHex);
+                     material.emissive.setHex(originalState.emissiveHex);
+                     material.emissiveIntensity = 1.0;
+                     material.needsUpdate = true;
+                 }
+             });
+             // Re-apply hover if necessary after exiting delete mode
+             handleHoverStateAfterInteraction();
+        }
+
+
+         // --- Utility & Control Functions ---
+
+         function getPlantUnderPointer() {
+            if (!pointer) return null;
+             raycaster.setFromCamera(pointer, camera);
+             const plantMeshes = placedPlants.map(p => p.mesh);
+             const intersectsPlants = raycaster.intersectObjects(plantMeshes);
+             if (intersectsPlants.length > 0) {
+                 const clickedPlantMesh = intersectsPlants[0].object;
+                 return placedPlants.find(p => p.mesh === clickedPlantMesh);
+             }
+             return null;
+         }
+
+
+         function toggleDeleteMode() {
+            isDeleteMode = !isDeleteMode;
+            if (isDeleteMode) {
+                deleteModeButton.classList.add('active');
+                deleteModeButton.textContent = 'Delete Mode ON';
+                // Apply delete visuals immediately
+                 applyDeleteModeVisuals(null); // Apply base delete style to all initially
+                 // Clear any active non-delete interactions
+                 isDraggingPlant = false; isDraggingVertex = false;
+                 draggedPlantInfo = null; draggedVertexIndex = -1;
+                 if (currentlyHoveredPlant) {
+                     // Don't restore, just nullify hover state, delete visuals take over
+                      currentlyHoveredPlant = null;
+                 }
+                 canvasContainer.style.cursor = 'crosshair'; // Set initial cursor for delete mode
+            } else {
+                deleteModeButton.classList.remove('active');
+                deleteModeButton.textContent = 'Toggle Delete Mode';
+                // Remove delete visuals and restore materials
+                removeDeleteModeVisuals();
+                // Cursor will be updated by handleHoverStateAfterInteraction
+            }
+         }
+
+         function deletePlant(plantInfo, toggleModeOff = false) { // toggleModeOff not really used here anymore
+             if (!plantInfo) return;
+             scene.remove(plantInfo.mesh);
+             if(plantInfo.mesh.geometry) plantInfo.mesh.geometry.dispose(); // Dispose geometry
+             // Material might be shared or managed elsewhere if optimization needed, but here it's simple
+             if (plantInfo.labelElement && plantInfo.labelElement.parentNode) {
+                 plantInfo.labelElement.parentNode.removeChild(plantInfo.labelElement);
+             }
+             const index = placedPlants.findIndex(p => p.id === plantInfo.id);
+             if (index > -1) {
+                 placedPlants.splice(index, 1);
+             }
+             // If the deleted plant was hovered, clear hover state
+             if(currentlyHoveredPlant === plantInfo) {
+                currentlyHoveredPlant = null;
+             }
+             updateCalculations();
+             updatePlantLabels();
+             // console.log(`Deleted plant: ${plantInfo.data.name}`);
+             // Re-evaluate hover/cursor state after deletion
+             handleHoverStateAfterInteraction();
+         }
+
+        // --- Calculation & Helper Functions (mostly unchanged) ---
+        function calculateBoxArea(vertices) { /* ... unchanged ... */
+            let area = 0.0; let j = vertices.length - 1;
+            for (let i = 0; i < vertices.length; i++) { area += (vertices[j].x + vertices[i].x) * (vertices[j].y - vertices[i].y); j = i; }
+            const areaWorldUnits = Math.abs(area / 2.0);
+            return areaWorldUnits / (FEET_TO_WORLD_UNITS * FEET_TO_WORLD_UNITS);
+        }
+        function calculateTotalPlantingAreaNeeded() { /* ... unchanged ... */
+             let totalArea = 0; placedPlants.forEach(p => { totalArea += p.data.spacing * p.data.spacing; }); return totalArea;
+        }
+        function updateCalculations() { /* ... unchanged ... */
+            const boxAreaSqFt = calculateBoxArea(gardenVertices);
+            const plantedAreaSqFt = calculateTotalPlantingAreaNeeded();
+            const availableAreaSqFt = boxAreaSqFt - plantedAreaSqFt;
+            totalAreaElement.textContent = boxAreaSqFt.toFixed(2);
+            availableAreaElement.textContent = Math.max(0, availableAreaSqFt).toFixed(2);
+            const soilDepthFt = (parseFloat(soilDepthInputElement.value) || DEFAULT_SOIL_DEPTH_INCHES) / 12.0;
+            const soilVolumeCuFt = boxAreaSqFt * soilDepthFt;
+            const mulchVolumeCuFt = boxAreaSqFt * MULCH_DEPTH_FEET;
+            soilNeededElement.textContent = soilVolumeCuFt.toFixed(2);
+            mulchNeededElement.textContent = mulchVolumeCuFt.toFixed(2);
+        }
+        function formatFeetInches(feet) { /* ... unchanged ... */
+            const totalInches = Math.round(feet * 12); const ft = Math.floor(totalInches / 12); const inches = totalInches % 12; return `${ft}' ${inches}"`;
+        }
+        function isPointInPolygon(point, polygonVertices) { /* ... unchanged ... */
+             let inside = false; for (let i = 0, j = polygonVertices.length - 1; i < polygonVertices.length; j = i++) { const xi = polygonVertices[i].x, yi = polygonVertices[i].y; const xj = polygonVertices[j].x, yj = polygonVertices[j].y; const intersect = ((yi > point.y) !== (yj > point.y)) && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi); if (intersect) inside = !inside; } return inside;
+        }
+         function checkPlantsInBounds() { /* Uses deletePlant now */
+            const plantsToRemove = placedPlants.filter(plant => !isPointInPolygon(plant.position, gardenVertices));
+             if(plantsToRemove.length > 0) {
+                alert(`${plantsToRemove.length} plant(s) were outside the resized box and have been removed.`);
+                plantsToRemove.forEach(plant => deletePlant(plant));
+             }
+         }
+        function worldToScreen(vector3) { /* ... unchanged ... */
+            const vector = vector3.clone(); vector.project(camera);
+            const x = (vector.x * 0.5 + 0.5) * canvasContainer.clientWidth; const y = (-vector.y * 0.5 + 0.5) * canvasContainer.clientHeight;
+             if (vector.z > 1.0) return null; return new THREE.Vector2(x, y);
+        }
+        function isOnScreen(screenPos) { /* ... unchanged ... */
+             return screenPos.x >= 0 && screenPos.x <= canvasContainer.clientWidth && screenPos.y >= 0 && screenPos.y <= canvasContainer.clientHeight;
+        }
+        function onWindowResize() { /* Now updates fill mesh too */
+            const aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            const frustumHeight = camera.top - camera.bottom;
+            camera.left = frustumHeight * aspect / -2; camera.right = frustumHeight * aspect / 2;
+            camera.top = frustumHeight / 2; camera.bottom = frustumHeight / -2;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            updateSegmentLabels(); updatePlantLabels();
+            // No need to redraw fill/outline here, camera change handles it
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // --- Start ---
+        init();
+    </script>
+</body>
+</html>
