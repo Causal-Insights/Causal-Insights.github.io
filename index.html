@@ -202,16 +202,36 @@
     }
     .service-card {
       background: #ffffff; /* White cards */
-      padding: 30px;
       border-radius: 8px;
       border: 1px solid #d0d7de; /* GitHub-style border */
-      text-align: left;
       transition: transform 0.2s ease, box-shadow 0.2s ease; /* 3. Hover Effects */
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      text-decoration: none; /* Remove underline from link */
+      display: block; /* Make the anchor fill the grid cell */
+      color: inherit; /* Inherit text color */
+      overflow: hidden; /* Contain elements */
     }
     .service-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 24px rgba(140,149,159,0.2);
+    }
+    .service-card-content {
+        padding: 30px; /* Padding for text content */
+        text-align: center; /* Center text content */
+    }
+    .service-card-image {
+        width: 100%;
+        padding: 20px 0; /* Add some padding around the image */
+        text-align: center; /* Center the image */
+        /* Optional: Add a background or border if needed */
+        /* background-color: #f8f8f8; */
+        /* border-bottom: 1px solid #eee; */
+    }
+    .service-card-image img {
+        max-width: 60%; /* Control image size, adjust as needed */
+        height: auto;
+        display: inline-block; /* Ensure centering works */
+        vertical-align: middle;
     }
     .service-card h3 {
       font-size: 1.5em; /* 4. Visual Hierarchy */
@@ -219,8 +239,6 @@
       margin-top: 0;
       margin-bottom: 15px;
       color: #0366d6; /* Use a primary color for card titles */
-      display: flex; /* Align icon/pseudo-element */
-      align-items: center;
     }
 
     .service-card p {
@@ -228,7 +246,7 @@
       font-weight: 400;
       color: #444c56;
       line-height: 1.6;
-      text-align: left; /* Override section's centered p */
+      text-align: center; /* Center paragraph text */
       margin-bottom: 0; /* Reset margin */
     }
 
@@ -424,18 +442,24 @@
     <section class="section fade-in" id="services">
       <h2>Our Services</h2>
       <div class="service-cards">
-        <div class="service-card">
-          <h3>Custom Algorithms</h3>
-          <p>Tailored algorithmic solutions designed to address your unique business challenges.</p>
-        </div>
-        <div class="service-card">
-          <h3>AI Agents & Automation</h3>
-          <p>Leverage intelligent automation and AI‐driven strategies to optimize processes and drive innovation.</p>
-        </div>
-        <div class="service-card">
-          <h3>Causal Inference & Decision Intelligence</h3>
-          <p>Transform data into insights with advanced causal inference techniques and decision‐making tools.</p>
-        </div>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>Custom Algorithms</h3>
+            <p>Tailored algorithmic solutions designed to address your unique business challenges.</p>
+          </div>
+        </a>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>AI Agents & Automation</h3>
+            <p>Leverage intelligent automation and AI‐driven strategies to optimize processes and drive innovation.</p>
+          </div>
+        </a>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>Causal Inference & Decision Intelligence</h3>
+            <p>Transform data into insights with advanced causal inference techniques and decision‐making tools.</p>
+          </div>
+        </a>
       </div>
     </section>
 
@@ -444,19 +468,27 @@
       <h2>AI Projects</h2>
       <p>Explore our portfolio of successful AI projects, showcasing how we leverage machine learning and AI agents to deliver value.</p>
       <div class="service-cards">
-        <div class="service-card">
-        <div align="center"><img src="just_compare_logo.jpg" alt="Just Compare Logo" style="max-width: 180px; height: auto;"></div>
-          <h3><a href="https://chatgpt.com/g/g-bHspzNmGA-just-compare">Just Compare</a></h3>
-          <p>The most used comparison tool on the ChatGPT Store. </p>
-        </div>
-        <div class="service-card">
-          <h3><a href="ai_projects/index.html">AI Generated Web-Applets</a></h3>
-          <p>Web-applets that (A)I developed, along with prompts and descriptions.</p>
-        </div>
-         <div class="service-card">
-          <h3>AI Personal Assistent Dashboard</h3>
-          <p>Organize everything using an AI personal assistent, designed just for you.</p>
-        </div>
+        <a href="https://chatgpt.com/g/g-bHspzNmGA-just-compare" class="service-card" target="_blank" rel="noopener noreferrer">
+          <div class="service-card-image">
+            <img src="just_compare_logo.jpg" alt="Just Compare Logo">
+          </div>
+          <div class="service-card-content">
+            <h3>Just Compare</h3>
+            <p>The most used comparison tool on the ChatGPT Store.</p>
+          </div>
+        </a>
+        <a href="ai_projects/index.html" class="service-card">
+          <div class="service-card-content">
+            <h3>AI Generated Web-Applets</h3>
+            <p>Web-applets that (A)I developed, along with prompts and descriptions.</p>
+          </div>
+        </a>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>AI Personal Assistent Dashboard</h3>
+            <p>Organize everything using an AI personal assistent, designed just for you.</p>
+          </div>
+        </a>
       </div>
     </section>
 
@@ -464,19 +496,25 @@
     <section class="section fade-in" id="causal-projects">
       <h2>Causal Projects</h2>
       <p>Discover how we apply causal inference techniques to understand true impact and drive informed decision-making in various domains.</p>
-       <div class="service-cards">
-        <div class="service-card">
-          <h3>Case Study Delta</h3>
-          <p>Example of using causal methods for marketing effectiveness analysis.</p>
-        </div>
-        <div class="service-card">
-          <h3>Case Study Epsilon</h3>
-          <p>Example demonstrating causal impact analysis for operational changes.</p>
-        </div>
-         <div class="service-card">
-          <h3>Case Study Zeta</h3>
-          <p>Highlighting the use of quasi-experimental design in product development.</p>
-        </div>
+      <div class="service-cards">
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>Case Study Delta</h3>
+            <p>Example of using causal methods for marketing effectiveness analysis.</p>
+          </div>
+        </a>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>Case Study Epsilon</h3>
+            <p>Example demonstrating causal impact analysis for operational changes.</p>
+          </div>
+        </a>
+        <a href="#" class="service-card">
+          <div class="service-card-content">
+            <h3>Case Study Zeta</h3>
+            <p>Highlighting the use of quasi-experimental design in product development.</p>
+          </div>
+        </a>
       </div>
     </section>
 
