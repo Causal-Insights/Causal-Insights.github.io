@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probability Distribution Visualizer</title>
+    <style>
+        :root {
+            --primary-color: #333;
+            --secondary-color: #555;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-gray: #f4f4f4;
+            --medium-gray: #ccc;
+            --dark-gray: #333;
+        }
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--light-gray);
+            overflow: hidden; /* Prevent body scroll */
+        }
+        #sidebar {
+            width: 220px; /* Slightly wider */
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+        }
+        #sidebar h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+        #sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #sidebar li {
+            padding: 8px 5px; /* Adjust padding */
+            cursor: pointer;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #sidebar li:hover, #sidebar li.active {
+            background-color: var(--secondary-color);
+        }
+        #main-content {
+            flex-grow: 1;
+            padding: 15px; /* Reduced padding */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Important for layout */
+        }
+         #header-area {
+            margin-bottom: 10px;
+         }
+         #current-dist-label {
+             margin: 0 0 10px 0;
+             font-size: 1.4em;
+             color: var(--primary-color);
+         }
+        #controls {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        #controls h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        #controls label {
+            display: inline-block;
+            margin-right: 5px;
+            min-width: 110px; /* Align inputs slightly wider */
+            font-size: 0.95em;
+        }
+        #controls input[type="number"] {
+            width: 75px; /* Adjust width */
+            margin-right: 10px;
+            margin-bottom: 5px; /* Spacing */
+            padding: 4px;
+            font-size: 0.9em;
+        }
+        #plot-area {
+            flex-grow: 1; /* Allow plot area to take remaining space */
+            display: flex;
+            flex-direction: column; /* Stack plot and stats/code */
+            min-height: 300px; /* Ensure minimum height */
+            overflow: hidden; /* Clip content */
+        }
+        #plot-container {
+            /* flex-grow: 1; Removed - let it size naturally first */
+            min-height: 250px; /* Minimum plot height */
+            height: 60%; /* Give plot more initial vertical space */
+            background-color: #fff;
+            border: 1px solid var(--medium-gray);
+            position: relative; /* Needed for overlays and Three.js */
+            margin-bottom: 10px;
+            overflow: hidden; /* Clip Three.js content */
+        }
+        #plot-overlays {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; /* Allow mouse events to pass through to canvas */
+            font-size: 10px;
+            color: var(--primary-color); /* Change default overlay text color to primary color */
+        }
+        .axis-label {
+            position: absolute;
+            color: var(--primary-color); /* Ensure axis labels are primary color */
+        }
+        #x-axis-label { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        #y-axis-label { top: 50%; left: 5px; transform: translateY(-50%) rotate(-90deg); transform-origin: left top 0; }
+        #x-value-min { bottom: 1px; left: 20px; } /* Adjusted positions */
+        #x-value-max { bottom: 1px; right: 5px; }
+        #y-value-max { top: 1px; left: 20px; }
+        #hover-coords {
+            position: absolute;
+            bottom: 20px; /* Position above x-axis labels */
+            left: 5px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: none; /* Hidden initially */
+        }
+        #info-area {
+             display: flex;
+             flex-direction: row; /* Stats and Code side-by-side */
+             gap: 15px;
+             overflow-y: auto; /* Allow scrolling if content overflows */
+             /* max-height: 40%; */ /* Limit height */
+             flex-shrink: 1; /* Allow shrinking */
+        }
+        #stats-container, #code-container {
+            background-color: var(--light-gray);
+            padding: 10px; /* Reduced padding */
+            border-radius: 5px;
+            flex: 1; /* Share space equally */
+            overflow-y: auto; /* Scroll within container */
+            min-width: 250px; /* Prevent excessive squishing */
+        }
+        #stats-container h3, #code-container h3 {
+            margin-top: 0;
+            font-size: 1.1em; /* Slightly smaller headers */
+            border-bottom: 1px solid var(--medium-gray); /* Add separator */
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        #stats-output {
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace; /* Monospaced font */
+            font-size: 0.95em; /* Increased font size */
+            line-height: 1.6; /* Improved spacing */
+            white-space: pre; /* Keep formatting */
+            color: var(--primary-color); /* Darker text */
+        }
+        #stats-output .stat-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+        #stats-output .stat-entry:last-child { border-bottom: none; }
+        #stats-output .stat-label {
+            display: inline-block;
+            min-width: 120px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        #stats-output .stat-value {
+            font-family: monospace;
+            font-size: 0.95em;
+            color: var(--dark-gray);
+            text-align: right;
+        }
+        #stats-output .stat-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--medium-gray);
+        }
+        #stats-output .stat-section:last-child { border-bottom: none; }
+        #stats-output .stat-section-title {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        #stats-output .stat-label {
+            display: inline-block;
+            width: 100px; /* Align labels */
+            font-weight: 600; /* Bolder labels */
+            color: var(--secondary-color);
+        }
+        #stats-output .stat-value {
+            font-weight: normal;
+            color: var(--primary-color);
+        }
+         #code-output {
+            display: flex;
+            flex-direction: column; /* Stack code vertically now */
+            gap: 10px;
+        }
+        #code-output > div {
+            background-color: var(--light-gray);
+            border: 1px solid var(--medium-gray);
+            padding: 8px; /* Reduced padding */
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+         #code-output h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: var(--secondary-color);
+         }
+        #code-output pre {
+            margin: 0;
+            font-family: monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: transparent;
+            padding: 0;
+        }
+        .error {
+            color: var(--danger-color); /* Bootstrap danger color */
+            font-size: 0.9em;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        canvas { display: block; }
+
+        /* Tick Labels */
+        .tick-label {
+            position: absolute;
+            font-size: 9px;
+            color: var(--primary-color); /* Make tick labels primary color */
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .x-tick-label { transform: translateX(-50%); /* Center horizontally */ }
+        .y-tick-label { transform: translateY(50%); /* Center vertically */ }
+
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Distributions</h2>
+        <ul id="dist-list">
+            <!-- Filled by JS -->
+        </ul>
+    </div>
+
+    <div id="main-content">
+        <div id="header-area">
+             <h2 id="current-dist-label">Select a Distribution</h2>
+        </div>
+
+        <div id="controls">
+            <h3>Parameters</h3>
+            <div id="param-inputs">
+                <!-- Filled by JS -->
+            </div>
+            <div id="error-message" class="error"></div>
+        </div>
+
+        <div id="plot-area">
+            <div id="plot-container">
+                <!-- Three.js canvas will be appended here -->
+                <div id="plot-overlays">
+                    <div id="x-axis-label" class="axis-label">x</div> <!-- Changed label -->
+                    <div id="y-axis-label" class="axis-label">f(x)</div> <!-- Changed label -->
+                    <div id="x-value-min" class="axis-label">0</div>
+                    <div id="x-value-max" class="axis-label">1</div>
+                    <div id="y-value-max" class="axis-label">1</div>
+                     <div id="hover-coords">x: 0.00, y: 0.00</div>
+                </div>
+            </div>
+
+            <div id="info-area">
+                <div id="stats-container">
+                    <h3>Statistics</h3>
+                    <div id="stats-output">Select a distribution and set parameters.</div>
+                </div>
+
+                <div id="code-container">
+                    <h3>Implementation Definitions</h3>
+                    <div id="code-output">
+                        <div><h4>STAN</h4><pre id="stan-code">-</pre></div>
+                        <div><h4>Numpyro</h4><pre id="numpyro-code">-</pre></div>
+                        <div><h4>TensorFlow Probability</h4><pre id="tfp-code">-</pre></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+
+    <script>
+        // --- Global Variables ---
+        let currentDistribution = null;
+        let scene, camera, renderer, plotObject, axesObject, gridHelper, hoverLines;
+        const plotContainer = document.getElementById('plot-container');
+        const paramInputsContainer = document.getElementById('param-inputs');
+        const statsOutput = document.getElementById('stats-output');
+        const distList = document.getElementById('dist-list');
+        const stanCode = document.getElementById('stan-code');
+        const numpyroCode = document.getElementById('numpyro-code');
+        const tfpCode = document.getElementById('tfp-code');
+        const errorMessage = document.getElementById('error-message');
+        const currentDistLabel = document.getElementById('current-dist-label');
+
+        // Overlay elements
+        const xValueMinLabel = document.getElementById('x-value-min');
+        const xValueMaxLabel = document.getElementById('x-value-max');
+        const yValueMaxLabel = document.getElementById('y-value-max');
+        const hoverCoordsLabel = document.getElementById('hover-coords');
+
+
+        const PLOT_POINTS = 200;
+        const PLOT_PADDING = 0.1;
+        const DISCRETE_LINE_WIDTH = 3; // Thicker line for discrete
+        const CONTINUOUS_LINE_WIDTH = 2;
+        const GRID_COLOR = 0xcccccc;
+        const GRID_DIVISIONS = 10;
+        const HOVER_LINE_COLOR = 0xff0000;
+
+        // --- Distribution Definitions (Mostly unchanged, check parameterization if issues persist) ---
+         const distributions = {
+            'Normal': {
+                label: 'Normal (Gaussian)',
+                params: [
+                    { name: 'mu', label: 'Mean (μ)', default: 0 },
+                    { name: 'sigma', label: 'Std Dev (σ)', default: 1, min: 0.001 }
+                ],
+                isContinuous: true,
+                domain: (p) => [p.mu - 4 * p.sigma, p.mu + 4 * p.sigma],
+                pdf_pmf: (x, p) => jStat.normal.pdf(x, p.mu, p.sigma),
+                stats: (p) => {
+                    // Ensure sigma is valid before calculating
+                    if (p.sigma <= 0 || !isFinite(p.mu) || !isFinite(p.sigma)) {
+                        return { mean: NaN, median: NaN, stddev: NaN, variance: NaN };
+                    }
+                    try {
+                        const variance = jStat.normal.variance(p.mu, p.sigma);
+                        return {
+                            mean: jStat.normal.mean(p.mu, p.sigma),
+                            median: jStat.normal.median(p.mu, p.sigma),
+                            stddev: Math.sqrt(variance), // FIXED: use sqrt(variance)
+                            variance: variance
+                        };
+                    } catch (e) {
+                        console.error("jStat Normal stats error:", e, "Params:", p);
+                        return { mean: NaN, median: NaN, stddev: NaN, variance: NaN };
+                    }
+                },
+                definitions: (p) => ({
+                    stan: `real y ~ normal(${p.mu.toFixed(4)}, ${p.sigma.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Normal(${p.mu.toFixed(4)}, ${p.sigma.toFixed(4)}))`,
+                    tfp: `y = tfd.Normal(loc=${p.mu.toFixed(4)}, scale=${p.sigma.toFixed(4)})`
+                })
+            },
+             'HalfNormal': {
+                label: 'Half-Normal',
+                params: [ { name: 'sigma', label: 'Scale (σ)', default: 1, min: 0.001 } ],
+                isContinuous: true,
+                domain: (p) => [0, 5 * p.sigma],
+                 pdf_pmf: (x, p) => (x < 0) ? 0 : 2 * jStat.normal.pdf(x, 0, p.sigma),
+                 stats: (p) => {
+                    const mean = p.sigma * Math.sqrt(2 / Math.PI);
+                    const variance = p.sigma**2 * (1 - 2 / Math.PI);
+                    const median = p.sigma * 0.67448975; // Approximate
+                    return { mean: mean, median: median, stddev: Math.sqrt(variance), variance: variance };
+                 },
+                definitions: (p) => ({
+                    stan: `real<lower=0> y ~ normal(0, ${p.sigma.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.HalfNormal(${p.sigma.toFixed(4)}))`,
+                    tfp: `y = tfd.HalfNormal(scale=${p.sigma.toFixed(4)})`
+                })
+            },
+            'Beta': {
+                label: 'Beta',
+                params: [
+                    { name: 'alpha', label: 'Alpha (α)', default: 2, min: 0.001 },
+                    { name: 'beta', label: 'Beta (β)', default: 5, min: 0.001 }
+                ],
+                isContinuous: true,
+                domain: (p) => [0, 1],
+                pdf_pmf: (x, p) => jStat.beta.pdf(x, p.alpha, p.beta),
+                stats: (p) => ({
+                    mean: jStat.beta.mean(p.alpha, p.beta),
+                    median: jStat.beta.median(p.alpha, p.beta),
+                    mode: (p.alpha > 1 && p.beta > 1) ? (p.alpha - 1) / (p.alpha + p.beta - 2) : (p.alpha === 1 && p.beta === 1 ? 'any in (0,1)' : (p.alpha <= 1 && p.beta > 1 ? 0 : (p.alpha > 1 && p.beta <= 1 ? 1 : 'undefined'))),
+                    variance: jStat.beta.variance(p.alpha, p.beta)
+                 }),
+                definitions: (p) => ({
+                    stan: `real<lower=0, upper=1> y ~ beta(${p.alpha.toFixed(4)}, ${p.beta.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Beta(${p.alpha.toFixed(4)}, ${p.beta.toFixed(4)}))`,
+                    tfp: `y = tfd.Beta(concentration1=${p.alpha.toFixed(4)}, concentration0=${p.beta.toFixed(4)})`
+                })
+            },
+            'Gamma': {
+                label: 'Gamma',
+                params: [
+                    { name: 'shape', label: 'Shape (α)', default: 2, min: 0.001 },
+                    { name: 'rate', label: 'Rate (β)', default: 1, min: 0.001 }
+                ],
+                isContinuous: true,
+                domain: (p) => {
+                    const mean = p.shape / p.rate;
+                    const stddev = Math.sqrt(p.shape / (p.rate * p.rate));
+                    // Avoid NaN/Infinity if shape or rate are near zero causing issues
+                    if (!isFinite(mean) || !isFinite(stddev) || stddev <= 0) return [0.001, 10]; // Fallback domain
+                    const upper = Math.max(mean + 4 * stddev, p.shape > 1 ? (p.shape-1)/p.rate * 3 : 5/p.rate );
+                    return [0.001, Math.max(upper, 0.002)]; // Ensure upper > lower
+                },
+                 // Use try-catch directly around potentially problematic jStat calls if needed
+                pdf_pmf: (x, p) => { try { return jStat.gamma.pdf(x, p.shape, 1 / p.rate); } catch(e) { return 0; } },
+                stats: (p) => {
+                    const scale = 1 / p.rate;
+                    // Ensure shape and rate are valid positive numbers
+                    if (p.shape <= 0 || p.rate <= 0 || !isFinite(p.shape) || !isFinite(p.rate) || !isFinite(scale)) {
+                        return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN, skewness: NaN, kurtosis: NaN };
+                    }
+                    try {
+                        const mean = jStat.gamma.mean(p.shape, scale);
+                        const variance = jStat.gamma.variance(p.shape, scale);
+                        const stddev = Math.sqrt(variance);
+                        // Use jStat.gammapinv for a more accurate median approximation
+                        const median = scale * jStat.gammapinv(0.5, p.shape);
+                        const mode = (p.shape >= 1) ? (p.shape - 1) * scale : '0 (if shape<1)';
+                        const skewness = 2 / Math.sqrt(p.shape);
+                        const kurtosis = 6 / p.shape; // Excess kurtosis
+                        return {
+                            mean,
+                            median,
+                            mode,
+                            variance,
+                            stddev,
+                            skewness,
+                            kurtosis
+                        };
+                    } catch (e) {
+                        console.error("jStat Gamma stats error:", e, "Params:", p);
+                        // Return NaNs if any jStat function fails
+                        return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN, skewness: NaN, kurtosis: NaN };
+                    }
+                },
+                definitions: (p) => ({
+                    stan: `real<lower=0> y ~ gamma(${p.shape.toFixed(4)}, ${p.rate.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Gamma(${p.shape.toFixed(4)}, ${p.rate.toFixed(4)}))`,
+                    tfp: `y = tfd.Gamma(concentration=${p.shape.toFixed(4)}, rate=${p.rate.toFixed(4)})`
+                })
+            },
+            'LogNormal': {
+                label: 'Log-Normal',
+                params: [
+                    { name: 'mu', label: 'Log Mean (μ)', default: 0 },
+                    { name: 'sigma', label: 'Log Std Dev (σ)', default: 0.5, min: 0.001 }
+                ],
+                isContinuous: true,
+                 domain: (p) => {
+                     try {
+                        const mean = Math.exp(p.mu + p.sigma**2 / 2);
+                        const variance = (Math.exp(p.sigma**2) - 1) * Math.exp(2 * p.mu + p.sigma**2);
+                         if (!isFinite(mean) || !isFinite(variance) || variance < 0) return [0.001, 10]; // Fallback
+                         const stddev = Math.sqrt(variance);
+                         const upper = Math.min(mean + 4 * stddev, Math.exp(p.mu + 3*p.sigma) * 1.5 ); // Adjusted heuristic
+                        return [0.001, Math.max(0.002, upper)];
+                     } catch (e) { return [0.001, 10]; } // Fallback on calculation error
+                },
+                pdf_pmf: (x, p) => { try { return jStat.lognormal.pdf(x, p.mu, p.sigma); } catch(e) { return 0; } },
+                stats: (p) => {
+                     if (p.sigma <= 0 || !isFinite(p.mu) || !isFinite(p.sigma)) return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                     try {
+                         return {
+                            mean: jStat.lognormal.mean(p.mu, p.sigma),
+                            median: jStat.lognormal.median(p.mu, p.sigma),
+                            mode: jStat.lognormal.mode(p.mu, p.sigma),
+                            variance: jStat.lognormal.variance(p.mu, p.sigma),
+                            stddev: Math.sqrt(jStat.lognormal.variance(p.mu, p.sigma))
+                        };
+                     } catch (e) {
+                         console.error("jStat LogNormal stats error:", e, "Params:", p);
+                         return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                     }
+                },
+                 definitions: (p) => ({
+                    stan: `real<lower=0> y ~ lognormal(${p.mu.toFixed(4)}, ${p.sigma.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.LogNormal(${p.mu.toFixed(4)}, ${p.sigma.toFixed(4)}))`,
+                    tfp: `y = tfd.LogNormal(loc=${p.mu.toFixed(4)}, scale=${p.sigma.toFixed(4)})`
+                })
+            },
+            'Weibull': {
+                label: 'Weibull',
+                params: [
+                    { name: 'shape', label: 'Shape (k)', default: 1.5, min: 0.001 },
+                    { name: 'scale', label: 'Scale (λ)', default: 1, min: 0.001 }
+                ],
+                isContinuous: true,
+                 domain: (p) => {
+                     try {
+                         // Heuristic: mean is scale * Gamma(1 + 1/shape)
+                         const meanApprox = p.scale * jStat.gammafn(1 + 1 / p.shape);
+                          // Mode is scale * ((shape - 1) / shape)^(1 / shape) for shape > 1
+                         const modeApprox = p.shape > 1 ? p.scale * Math.pow((p.shape - 1) / p.shape, 1 / p.shape) : 0;
+                         // Use mean or mode * factor as upper bound guide
+                         const upper = Math.max(meanApprox * 3, modeApprox * 5, p.scale * 4);
+                         return [0.001, Math.max(0.002, isFinite(upper) ? upper : p.scale * 5)]; // Fallback if gammafn fails
+                     } catch (e) { return [0.001, p.scale * 5]; } // Fallback
+                 },
+                pdf_pmf: (x, p) => { try { return jStat.weibull.pdf(x, p.scale, p.shape); } catch (e) { return 0;} },
+                stats: (p) => {
+                    if (p.shape <= 0 || p.scale <= 0 || !isFinite(p.shape) || !isFinite(p.scale)) return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                    try {
+                        const variance = jStat.weibull.variance(p.scale, p.shape);
+                         return {
+                            mean: jStat.weibull.mean(p.scale, p.shape),
+                            median: jStat.weibull.median(p.scale, p.shape),
+                            mode: (p.shape > 1) ? p.scale * Math.pow((p.shape - 1) / p.shape, 1 / p.shape) : (p.shape === 1 ? 0 : 'near 0'),
+                            variance: variance,
+                            stddev: Math.sqrt(variance)
+                         };
+                     } catch (e) {
+                         console.error("jStat Weibull stats error:", e, "Params:", p);
+                         return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                     }
+                },
+                 definitions: (p) => ({
+                    stan: `real<lower=0> y ~ weibull(${p.shape.toFixed(4)}, ${p.scale.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Weibull(${p.scale.toFixed(4)}, ${p.shape.toFixed(4)}))`,
+                    tfp: `y = tfd.Weibull(scale=${p.scale.toFixed(4)}, concentration=${p.shape.toFixed(4)})`
+                })
+            },
+            'Poisson': {
+                label: 'Poisson',
+                params: [ { name: 'lambda', label: 'Rate (λ)', default: 3, min: 0 } ], // Allow lambda = 0 technically
+                isContinuous: false,
+                domain: (p) => [-0.5, Math.max(10, Math.ceil(p.lambda + 4 * Math.sqrt(p.lambda))) + 0.5], // Adjusted domain
+                pdf_pmf: (k, p) => {
+                    k = Math.round(k); // Ensure integer
+                    if (k < 0 || !isFinite(p.lambda) || p.lambda < 0) return 0;
+                    try { return jStat.poisson.pdf(k, p.lambda); } catch (e) { return 0; }
+                 },
+                stats: (p) => {
+                    if (p.lambda < 0 || !isFinite(p.lambda)) return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                    try {
+                         return {
+                            mean: jStat.poisson.mean(p.lambda),
+                            median: jStat.poisson.median(p.lambda), // Approx
+                            mode: Math.floor(p.lambda),
+                            variance: jStat.poisson.variance(p.lambda),
+                            stddev: Math.sqrt(jStat.poisson.variance(p.lambda))
+                         };
+                     } catch (e) {
+                        console.error("jStat Poisson stats error:", e, "Params:", p);
+                        return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                     }
+                },
+                definitions: (p) => ({
+                    stan: `int<lower=0> y ~ poisson(${p.lambda.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Poisson(${p.lambda.toFixed(4)}))`,
+                    tfp: `y = tfd.Poisson(rate=${p.lambda.toFixed(4)})`
+                })
+            },
+            'Bernoulli': {
+                label: 'Bernoulli',
+                params: [ { name: 'p', label: 'Probability (p)', default: 0.5, min: 0, max: 1 } ],
+                isContinuous: false,
+                domain: (p) => [-0.5, 1.5],
+                pdf_pmf: (k, p) => {
+                    if (!isFinite(p.p) || p.p < 0 || p.p > 1) return 0;
+                    k = Math.round(k);
+                    if (k === 0) return 1 - p.p;
+                    if (k === 1) return p.p;
+                    return 0;
+                 },
+                stats: (p) => {
+                    if (!isFinite(p.p) || p.p < 0 || p.p > 1) return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                    const variance = p.p * (1 - p.p);
+                    return {
+                        mean: p.p,
+                        median: (p.p < 0.5) ? 0 : ((p.p > 0.5) ? 1 : '0 or 1'),
+                        mode: (p.p < 0.5) ? 0 : ((p.p > 0.5) ? 1 : (p.p === 0.5 ? '0 and 1' : NaN)),
+                        variance: variance,
+                        stddev: Math.sqrt(variance)
+                    };
+                },
+                definitions: (p) => ({
+                    stan: `int<lower=0, upper=1> y ~ bernoulli(${p.p.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Bernoulli(probs=${p.p.toFixed(4)}))`,
+                    tfp: `y = tfd.Bernoulli(probs=${p.p.toFixed(4)})`
+                })
+            },
+             'Binomial': {
+                label: 'Binomial',
+                params: [
+                    { name: 'n', label: 'Trials (n)', default: 10, min: 0, step: 1 }, // Allow n=0
+                    { name: 'p', label: 'Probability (p)', default: 0.5, min: 0, max: 1 }
+                ],
+                isContinuous: false,
+                domain: (p) => [-0.5, p.n + 0.5],
+                pdf_pmf: (k, p) => {
+                    k = Math.round(k);
+                    if (k < 0 || k > p.n || p.n < 0 || !Number.isInteger(p.n) || !isFinite(p.p) || p.p < 0 || p.p > 1) return 0;
+                    try { return jStat.binomial.pdf(k, p.n, p.p); } catch (e) { return 0; }
+                },
+                stats: (p) => {
+                    if (p.n < 0 || !Number.isInteger(p.n) || !isFinite(p.p) || p.p < 0 || p.p > 1) return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                    try {
+                        const variance = jStat.binomial.variance(p.n, p.p);
+                        return {
+                            mean: jStat.binomial.mean(p.n, p.p),
+                            median: jStat.binomial.median(p.n, p.p), // Approx
+                            mode: Math.floor((p.n + 1) * p.p),
+                            variance: variance,
+                            stddev: Math.sqrt(variance)
+                         };
+                    } catch(e) {
+                         console.error("jStat Binomial stats error:", e, "Params:", p);
+                         return { mean: NaN, median: NaN, mode: NaN, variance: NaN, stddev: NaN };
+                    }
+                 },
+                 definitions: (p) => ({
+                    stan: `int<lower=0, upper=${p.n}> y ~ binomial(${p.n}, ${p.p.toFixed(4)});`,
+                    numpyro: `y = numpyro.sample("y", dist.Binomial(${p.n}, probs=${p.p.toFixed(4)}))`,
+                    tfp: `y = tfd.Binomial(total_count=${p.n}, probs=${p.p.toFixed(4)})`
+                })
+            },
+        };
+
+
+        // --- Three.js Setup ---
+        function initThreeJS() {
+            const width = plotContainer.clientWidth;
+            const height = plotContainer.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            camera = new THREE.OrthographicCamera(0, 1, 1, 0, -10, 10); // Adjusted near/far
+            camera.position.z = 5; // Position camera further back
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            plotContainer.insertBefore(renderer.domElement, plotContainer.firstChild); // Insert canvas
+
+            // Plot object (LineSegments)
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x000000, // Change plot line to black
+                linewidth: CONTINUOUS_LINE_WIDTH // Default width
+            });
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]);
+            plotObject = new THREE.LineSegments(lineGeometry, lineMaterial);
+            plotObject.frustumCulled = false; // Prevent culling issues with dynamic geometry
+            scene.add(plotObject);
+
+            // Axes helper (simple lines)
+            const axesMaterial = new THREE.LineBasicMaterial({ color: 0x000000 }); // Change axes to black
+            const axesGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)]);
+            axesObject = new THREE.LineSegments(axesGeometry, axesMaterial);
+            axesObject.frustumCulled = false;
+            scene.add(axesObject);
+
+            // Grid Helper
+            gridHelper = new THREE.GridHelper(1, GRID_DIVISIONS, GRID_COLOR, GRID_COLOR);
+            gridHelper.material.transparent = true; // Make grid semi-transparent
+            gridHelper.material.opacity = 0.3;
+            gridHelper.rotation.x = Math.PI / 2; // Rotate to XY plane
+            gridHelper.frustumCulled = false;
+            gridHelper.visible = false; // Hide grid by default
+            scene.add(gridHelper);
+
+             // Hover Lines Helper
+             const hoverMaterial = new THREE.LineBasicMaterial({ color: HOVER_LINE_COLOR });
+             const hoverPointsVert = [new THREE.Vector3(0,0,1), new THREE.Vector3(0,1,1)]; // z=1 to draw on top
+             const hoverPointsHoriz = [new THREE.Vector3(0,0,1), new THREE.Vector3(1,0,1)];
+             const hoverGeomVert = new THREE.BufferGeometry().setFromPoints(hoverPointsVert);
+             const hoverGeomHoriz = new THREE.BufferGeometry().setFromPoints(hoverPointsHoriz);
+             hoverLines = {
+                 vert: new THREE.Line(hoverGeomVert, hoverMaterial),
+                 horiz: new THREE.Line(hoverGeomHoriz, hoverMaterial)
+             };
+             hoverLines.vert.visible = false;
+             hoverLines.horiz.visible = false;
+             hoverLines.vert.frustumCulled = false;
+             hoverLines.horiz.frustumCulled = false;
+             scene.add(hoverLines.vert);
+             scene.add(hoverLines.horiz);
+
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize, false);
+            // Handle Hover
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('mouseleave', onMouseLeave, false);
+
+            onWindowResize(); // Initial size setup
+        }
+
+        function onWindowResize() {
+            if (!renderer || !camera || !plotContainer) return;
+            const width = plotContainer.clientWidth;
+            const height = plotContainer.clientHeight;
+
+            // Check for valid dimensions
+            if (width <= 0 || height <= 0) return;
+
+            renderer.setSize(width, height);
+            camera.aspect = width / height; // Although Ortho, helps if we switch later
+            // Camera frustum is updated in updatePlotGeometry based on data
+
+            // Re-render if a plot exists
+            if (currentDistribution) {
+                 updateDisplay(); // Re-trigger plot update which handles camera
+            } else {
+                // If no distribution selected yet, just render the empty scene
+                try { renderer.render(scene, camera); } catch (e) {}
+            }
+        }
+
+
+        // --- UI and Logic ---
+        function populateSidebar() {
+            distList.innerHTML = '';
+            Object.keys(distributions).forEach(key => {
+                const li = document.createElement('li');
+                li.textContent = distributions[key].label;
+                li.title = distributions[key].label; // Tooltip for long names
+                li.dataset.distKey = key;
+                li.addEventListener('click', () => selectDistribution(key));
+                distList.appendChild(li);
+            });
+        }
+
+        function selectDistribution(distKey) {
+            currentDistribution = distKey;
+            currentDistLabel.textContent = distributions[distKey].label; // Update label
+
+            // Update sidebar active state
+            document.querySelectorAll('#dist-list li').forEach(li => {
+                li.classList.toggle('active', li.dataset.distKey === distKey);
+            });
+
+            // Clear previous inputs and plot immediately
+            paramInputsContainer.innerHTML = '';
+            errorMessage.textContent = '';
+            clearPlot(); // CLEAR PLOT HERE
+
+            // Create new inputs
+            const distConfig = distributions[distKey];
+            distConfig.params.forEach(param => {
+                const label = document.createElement('label');
+                label.textContent = `${param.label}:`;
+                label.htmlFor = `param-${param.name}`;
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.id = `param-${param.name}`;
+                input.name = param.name;
+                input.value = param.default;
+                if (param.min !== undefined) input.min = param.min;
+                if (param.max !== undefined) input.max = param.max;
+                input.step = param.step || 'any';
+
+                input.addEventListener('input', handleParamChange);
+                input.addEventListener('change', handleParamChange);
+
+                paramInputsContainer.appendChild(label);
+                paramInputsContainer.appendChild(input);
+                paramInputsContainer.appendChild(document.createElement('br'));
+            });
+
+            updateDisplay(); // Update stats, code, and plot for the new selection
+        }
+
+        function handleParamChange() {
+             errorMessage.textContent = '';
+             updateDisplay();
+        }
+
+        function getParameters() {
+             const params = {};
+             const distConfig = distributions[currentDistribution];
+             let isValid = true;
+             errorMessage.textContent = '';
+
+             if (!distConfig) return { params: null, isValid: false };
+
+             distConfig.params.forEach(param => {
+                 const input = document.getElementById(`param-${param.name}`);
+                 if (!input) { // Safety check if element not found
+                    errorMessage.textContent += `Input for ${param.label} missing. `;
+                    isValid = false;
+                    return; // Skip to next param
+                 }
+
+                 let value = input.value === '' ? NaN : parseFloat(input.value); // Treat empty input as NaN
+
+                 // Basic validation
+                if (isNaN(value)) {
+                    errorMessage.textContent += `Invalid number for ${param.label}. `;
+                    isValid = false;
+                 } else {
+                     // Clamp to min/max if defined, and show message
+                     if (param.min !== undefined && value < param.min) {
+                         // Allow very small tolerance for floating point issues near boundaries
+                         if (Math.abs(value - param.min) > 1e-9) {
+                            errorMessage.textContent += `${param.label} was < ${param.min}, clamped. `;
+                            value = param.min;
+                            input.value = value; // Update UI
+                         }
+                     }
+                     if (param.max !== undefined && value > param.max) {
+                         if (Math.abs(value - param.max) > 1e-9) {
+                             errorMessage.textContent += `${param.label} was > ${param.max}, clamped. `;
+                             value = param.max;
+                             input.value = value; // Update UI
+                         }
+                     }
+
+                     // Integer check for specific params
+                     if (param.step === 1 && !Number.isInteger(value)) {
+                        // Only show message if it wasn't already clamped to an integer min/max
+                        if (input.value !== String(Math.floor(value))) {
+                            errorMessage.textContent += `${param.label} must be integer, using floor(). `;
+                        }
+                        value = Math.floor(value);
+                        input.value = value; // Update UI
+                     }
+                 }
+
+
+                 params[param.name] = value;
+             });
+
+             // Additional check: Ensure sigma/scale/rate > 0 where strictly required mathematically
+             for (const pName in params) {
+                 if (['sigma', 'scale', 'rate'].includes(pName) && params[pName] <= 0) {
+                     // Find the param config for the label
+                     const paramConfig = distConfig.params.find(p => p.name === pName);
+                     const label = paramConfig ? paramConfig.label : pName;
+                     if (paramConfig && paramConfig.min === 0 && params[pName] === 0) {
+                         // Allow 0 if min is explicitly 0 (e.g. Poisson lambda can be 0)
+                     } else {
+                         errorMessage.textContent += `${label} must be > 0. `;
+                         isValid = false;
+                     }
+                 }
+                 // Ensure shape > 0 for Gamma/Weibull
+                 if (['shape'].includes(pName) && ['Gamma', 'Weibull'].includes(currentDistribution) && params[pName] <= 0) {
+                     const paramConfig = distConfig.params.find(p => p.name === pName);
+                     const label = paramConfig ? paramConfig.label : pName;
+                     errorMessage.textContent += `${label} must be > 0. `;
+                     isValid = false;
+                 }
+                 // Ensure alpha/beta > 0 for Beta
+                 if (['alpha', 'beta'].includes(pName) && currentDistribution === 'Beta' && params[pName] <= 0) {
+                     const paramConfig = distConfig.params.find(p => p.name === pName);
+                     const label = paramConfig ? paramConfig.label : pName;
+                     errorMessage.textContent += `${label} must be > 0. `;
+                     isValid = false;
+                 }
+             }
+
+
+             return { params, isValid };
+         }
+
+
+        function updateDisplay() {
+            if (!currentDistribution || !scene) return; // Ensure Three.js is initialized
+
+            const { params, isValid } = getParameters();
+
+            if (!isValid) {
+                statsOutput.textContent = 'Invalid parameters.';
+                stanCode.textContent = '-'; numpyroCode.textContent = '-'; tfpCode.textContent = '-';
+                clearPlot();
+                updateAxisLabels(0, 1, 0, 1); // Reset labels
+                return;
+            }
+
+            const distConfig = distributions[currentDistribution];
+
+            // Update Statistics (with error handling)
+            try {
+                const stats = distConfig.stats(params);
+                let statsHTML = '';
+                
+                // Central Tendency Section
+                statsHTML += '<div class="stat-section">';
+                statsHTML += '<div class="stat-section-title">Central Tendency</div>';
+                if ('mean' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Mean:</span><span class="stat-value">${formatStatValue(stats.mean)}</span></div>`;
+                if ('median' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Median:</span><span class="stat-value">${formatStatValue(stats.median)}</span></div>`;
+                if ('mode' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Mode:</span><span class="stat-value">${formatStatValue(stats.mode)}</span></div>`;
+                statsHTML += '</div>';
+                
+                // Dispersion Section
+                statsHTML += '<div class="stat-section">';
+                statsHTML += '<div class="stat-section-title">Dispersion</div>';
+                if ('variance' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Variance:</span><span class="stat-value">${formatStatValue(stats.variance)}</span></div>`;
+                if ('stddev' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Std Dev:</span><span class="stat-value">${formatStatValue(stats.stddev)}</span></div>`;
+                statsHTML += '</div>';
+                
+                // Shape Section (if available)
+                if ('skewness' in stats || 'kurtosis' in stats) {
+                    statsHTML += '<div class="stat-section">';
+                    statsHTML += '<div class="stat-section-title">Shape</div>';
+                    if ('skewness' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Skewness:</span><span class="stat-value">${formatStatValue(stats.skewness)}</span></div>`;
+                    if ('kurtosis' in stats) statsHTML += `<div class="stat-entry"><span class="stat-label">Kurtosis:</span><span class="stat-value">${formatStatValue(stats.kurtosis)}</span></div>`;
+                    statsHTML += '</div>';
+                }
+                
+                statsOutput.innerHTML = statsHTML || '<span class="error">Could not calculate stats.</span>';
+            } catch (e) {
+                console.error("Error calculating stats for", currentDistribution, ":", e, "Params:", params);
+                statsOutput.innerHTML = `<span class="error">Stats Error: ${e.message}</span>`;
+            }
+
+            // Helper function to format stat values
+            function formatStatValue(value) {
+                if (typeof value === 'number') {
+                    if (isNaN(value) || !isFinite(value)) return 'N/A';
+                    if (Math.abs(value) < 1e-4 && value !== 0) return value.toExponential(3);
+                    return value.toFixed(4);
+                }
+                return value; // Return as is if string or other type
+            }
+
+             // Update Code Definitions
+             try {
+                const definitions = distConfig.definitions(params);
+                stanCode.textContent = definitions.stan;
+                numpyroCode.textContent = definitions.numpyro;
+                tfpCode.textContent = definitions.tfp;
+             } catch (e) {
+                 console.error("Error generating definitions:", e);
+                 stanCode.textContent = 'Error'; numpyroCode.textContent = 'Error'; tfpCode.textContent = 'Error';
+             }
+
+
+             // Update Plot Geometry (only if params still valid after stats try/catch if needed)
+             updatePlotGeometry(params);
+        }
+
+         function clearPlot() {
+             if (!scene) return; // Don't try to clear if not initialized
+
+             // Hide main plot line
+             if (plotObject) {
+                 plotObject.visible = false; // Hide instead of replacing geometry instantly
+             }
+             // Hide grid and axes (optional, could leave grid)
+             if(gridHelper) gridHelper.visible = false; // Ensure grid stays hidden
+             if(axesObject) axesObject.visible = false;
+             // Hide hover lines
+             if(hoverLines) {
+                 hoverLines.vert.visible = false;
+                 hoverLines.horiz.visible = false;
+             }
+             if(renderer && camera) {
+                try { renderer.render(scene, camera); } catch (e) {} // Render the cleared state
+            }
+            updateAxisLabels('-', '-', '-', '-'); // Clear labels
+            hoverCoordsLabel.style.display = 'none'; // Hide hover coords too
+         }
+
+        function updatePlotGeometry(params) {
+             if (!currentDistribution || !params || !scene) return;
+
+             plotObject.visible = true; // Make sure plot is visible
+             gridHelper.visible = false; // Ensure grid is hidden when plot updates
+             axesObject.visible = true;
+
+
+             const distConfig = distributions[currentDistribution];
+             const isContinuous = distConfig.isContinuous;
+             let minX_raw, maxX_raw;
+
+             // Get domain with error handling
+             try {
+                 [minX_raw, maxX_raw] = distConfig.domain(params);
+                 if (!isFinite(minX_raw) || !isFinite(maxX_raw) || maxX_raw <= minX_raw) {
+                    console.warn("Invalid domain calculated, using fallback:", [0, 1]);
+                    [minX_raw, maxX_raw] = [0, 1]; // Fallback domain
+                 }
+             } catch (e) {
+                console.error("Error calculating domain:", e, "Params:", params);
+                errorMessage.textContent = "Error calculating plot domain. Check parameters.";
+                clearPlot();
+                return;
+             }
+
+
+             const range = maxX_raw - minX_raw;
+             // Handle very small or zero range
+             const paddingX = range === 0 ? 0.5 : range * PLOT_PADDING;
+             const minX = minX_raw - paddingX;
+             const maxX = maxX_raw + paddingX;
+
+
+             const points = [];
+             let maxY = 0;
+             const minY = 0; // PDF/PMF are non-negative
+
+             try {
+                 if (isContinuous) {
+                     plotObject.material.linewidth = CONTINUOUS_LINE_WIDTH; // Set line width
+                     const step = (maxX - minX) / PLOT_POINTS;
+                     for (let i = 0; i <= PLOT_POINTS; i++) {
+                         const x = minX + i * step;
+                         let y = distConfig.pdf_pmf(x, params);
+
+                         // Clamp Y if it becomes excessively large or invalid due to numerical issues
+                         if (isNaN(y) || !isFinite(y)) y = 0;
+                         y = Math.max(0, y); // Ensure non-negative
+
+                         // Calculate maxY only within the core domain to avoid artificial inflation from tails
+                         if (x >= minX_raw && x <= maxX_raw) {
+                             maxY = Math.max(maxY, y);
+                         }
+
+                         // Add segments for the line plot
+                         if (i > 0) {
+                             const prev_x = minX + (i - 1) * step;
+                             let prev_y_raw = distConfig.pdf_pmf(prev_x, params);
+                             let prev_y = (isNaN(prev_y_raw) || !isFinite(prev_y_raw)) ? 0 : Math.max(0, prev_y_raw);
+
+                             points.push(new THREE.Vector3(prev_x, prev_y, 0));
+                             points.push(new THREE.Vector3(x, y, 0));
+                         } else {
+                              // Add first point for the start of the line
+                             points.push(new THREE.Vector3(x,y,0));
+                             points.push(new THREE.Vector3(x,y,0)); // Duplicate for segments
+                         }
+                     }
+                      // Ensure last segment is added if loop finishes
+                      if (points.length > 0 && points.length % 2 !== 0) {
+                          points.push(points[points.length-1]); // Duplicate last point
+                      }
+
+                 } else { // Discrete distribution
+                     plotObject.material.linewidth = DISCRETE_LINE_WIDTH; // Use thicker line
+                     const startK = Math.max(0, Math.ceil(minX_raw));
+                     const endK = Math.floor(maxX_raw);
+                     maxY = 0; // Reset maxY for discrete case based only on calculated points
+
+                     if(startK > endK) { // Handle cases like n=0 for Binomial
+                        maxY = 0.1; // Give a small default height if no points
+                     } else {
+                         for (let k = startK; k <= endK; k++) {
+                             let y = distConfig.pdf_pmf(k, params);
+                             if (isNaN(y) || !isFinite(y)) y = 0;
+                             y = Math.max(0, y);
+                             maxY = Math.max(maxY, y);
+                             // Draw a vertical line from (k, 0) to (k, y)
+                             points.push(new THREE.Vector3(k, 0, 0));
+                             points.push(new THREE.Vector3(k, y, 0));
+                         }
+                     }
+                 }
+             } catch (e) {
+                 console.error("Error calculating plot points:", e, "Params:", params);
+                 errorMessage.textContent = "Error calculating plot points. Check parameters.";
+                 clearPlot();
+                 return;
+             }
+
+              // Handle cases where maxY remains 0 or very small
+             if (maxY <= 1e-6) { maxY = 0.1; } // Set a minimum visible height
+
+
+             // Add padding to Y axis
+             const paddingY = maxY * PLOT_PADDING;
+             const plotHeight = maxY + paddingY;
+             const plotBottom = minY - paddingY * 0.2; // Allow a tiny bit below 0 for visual clarity
+
+
+             // --- Update Three.js Objects ---
+
+             // 1. Update Camera Frustum
+             camera.left = minX;
+             camera.right = maxX;
+             camera.top = plotHeight;
+             camera.bottom = plotBottom;
+             camera.updateProjectionMatrix();
+
+             // 2. Update Plot Object Geometry
+             if (points.length > 1) { // Need at least two points for segments
+                plotObject.geometry.dispose();
+                plotObject.geometry = new THREE.BufferGeometry().setFromPoints(points);
+             } else {
+                 // Clear geometry if not enough points
+                 plotObject.geometry.dispose();
+                 plotObject.geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]);
+             }
+             plotObject.geometry.computeBoundingSphere(); // Helps with rendering/culling
+
+             // 3. Update Axes Geometry
+             const axesPoints = [
+                 new THREE.Vector3(minX, 0, 0), new THREE.Vector3(maxX, 0, 0), // X axis
+                 new THREE.Vector3(minX_raw < 0 && maxX_raw > 0 ? 0 : minX, plotBottom, 0), // Start Y axis at 0 if visible, else at minX
+                 new THREE.Vector3(minX_raw < 0 && maxX_raw > 0 ? 0 : minX, plotHeight, 0)  // End Y axis
+             ];
+             axesObject.geometry.dispose();
+             // --- Update HTML Overlays ---
+             updateAxisLabels(minX, maxX, plotBottom, plotHeight);
+
+             // --- Render ---
+             try {
+                renderer.render(scene, camera);
+             } catch (e) {
+                console.error("Rendering error:", e);
+             }
+         }
+
+         function updateAxisLabels(camLeft, camRight, camBottom, camTop) {
+             const formatLabel = (val) => {
+                 if (typeof val !== 'number' || !isFinite(val)) return '-';
+                 if (Math.abs(val) > 1000 || (Math.abs(val) < 0.01 && val !== 0)) return val.toExponential(1);
+                 return val.toFixed(2);
+             }
+             xValueMinLabel.textContent = formatLabel(camLeft);
+             xValueMaxLabel.textContent = formatLabel(camRight);
+             // For Y max, use the actual calculated max density/prob before padding
+             // Find maxY again (could pass it down, but recalculating is okay here)
+             let maxY = 0;
+             if (plotObject && plotObject.geometry && plotObject.geometry.attributes.position) {
+                 const positions = plotObject.geometry.attributes.position.array;
+                 for (let i = 1; i < positions.length; i += 3) { // Y component is at index 1, 4, 7...
+                     maxY = Math.max(maxY, positions[i]);
+                 }
+             }
+              if (maxY <= 1e-6) { maxY = camTop / (1 + PLOT_PADDING); } // Estimate from camTop if plot was flat
+             yValueMaxLabel.textContent = formatLabel(maxY); // Show the max value before padding
+         }
+
+         // --- Hover Interaction ---
+        function onMouseMove(event) {
+            if (!renderer || !camera || !scene || !plotObject || !plotObject.visible) {
+                onMouseLeave(); // Hide if plot isn't ready/visible
+                return;
+            }
+
+            const canvas = renderer.domElement;
+            const rect = canvas.getBoundingClientRect();
+
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            const mouse = new THREE.Vector2();
+            mouse.x = ((event.clientX - rect.left) / canvas.clientWidth) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / canvas.clientHeight) * 2 + 1;
+
+            // Unproject mouse coordinates to world space (plot coordinates)
+            const vector = new THREE.Vector3(mouse.x, mouse.y, 0.5); // z=0.5 is between near/far plane
+            vector.unproject(camera);
+
+            const worldX = vector.x;
+            const worldY = vector.y;
+
+            // Check if mouse is within the current camera bounds
+            if (worldX >= camera.left && worldX <= camera.right && worldY >= camera.bottom && worldY <= camera.top) {
+                // Update hover line positions
+                const hoverVertPoints = [
+                    new THREE.Vector3(worldX, camera.bottom, 1), // Draw lines slightly in front (z=1)
+                    new THREE.Vector3(worldX, camera.top, 1)
+                ];
+                 const hoverHorizPoints = [
+                    new THREE.Vector3(camera.left, worldY, 1),
+                    new THREE.Vector3(camera.right, worldY, 1)
+                 ];
+
+                hoverLines.vert.geometry.dispose();
+                hoverLines.vert.geometry = new THREE.BufferGeometry().setFromPoints(hoverVertPoints);
+                hoverLines.horiz.geometry.dispose();
+                hoverLines.horiz.geometry = new THREE.BufferGeometry().setFromPoints(hoverHorizPoints);
+
+                hoverLines.vert.visible = true;
+                hoverLines.horiz.visible = true;
+
+                // Update coordinate display label
+                hoverCoordsLabel.textContent = `x: ${worldX.toFixed(2)}, y: ${worldY.toFixed(2)}`;
+                hoverCoordsLabel.style.display = 'block';
+
+                renderer.render(scene, camera); // Re-render to show lines
+            } else {
+                onMouseLeave(); // Hide if outside bounds
+            }
+        }
+
+        function onMouseLeave() {
+            if (hoverLines && hoverLines.vert.visible) {
+                hoverLines.vert.visible = false;
+                hoverLines.horiz.visible = false;
+                hoverCoordsLabel.style.display = 'none';
+                if(renderer && scene && camera && plotObject && plotObject.visible) {
+                    try { renderer.render(scene, camera); } catch(e){} // Re-render to hide lines
+                }
+            }
+        }
+
+
+        // --- Initialization ---
+        function init() {
+            try {
+                 initThreeJS();
+                 populateSidebar();
+                 // Don't select a default distribution initially, let user choose
+                 // selectDistribution('Normal'); // Or uncomment to select Normal by default
+            } catch (error) {
+                 console.error("Initialization failed:", error);
+                 document.getElementById('main-content').innerHTML =
+                    `<div class="error">Failed to initialize the visualizer. Please check the console for errors. Ensure your browser supports WebGL. ${error.message}</div>`;
+             }
+        }
+
+        // --- Run ---
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>

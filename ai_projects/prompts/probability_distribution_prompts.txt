@@ -1,0 +1,35 @@
+Model:  Google Gemini 2.5 Pro Preview 03-25
+
+---
+
+Develop a math Web Applet that lets users visualize probability distributions.  Please consider the following things.
+
+User can select a Probability Distribution type from the sidebar.
+Include options for the following distributions: Normal, Half-Normal, Beta, Gamma, Log-Normal, Weibull, Poisson, Bernoulli, Binomial.
+All the user to enter in the parameters appropriate for each distribution.
+Plot the distribution
+Show statistical quantities for the distributions.  Including:  Mean, Median, Expected Value, Standard Deviation (and other metrics appropriate for that distribution type).
+Show the definition for the implementation of the distributions in the following statistical packages: STAN, Numpyro, Tensorflow.
+Make it interactive. Use Three.js. Use JS, CSS and HTML in a single HTML file.
+
+---
+
+Fix the following things:
+Some of the statistics are generating an error: Including the Gaussian, Gamma, Poisson and Binomial.
+Label the x-y axis to provide a sense of scale.
+Make a grid background for the plots.
+Draw the discrete distributions using thicker lines or a bar plot.  The lines are two thin.
+Make a label that shows which distribution the user selected.
+Clear the previous plot when a new distribution type is selected.
+
+Add this new feature:
+When the user hovers over the plot, make a horizontal and vertical line to show the (x, y)  position of the mouse curser.
+
+--- 
+Switched to Visual Studio Code Agent Mode.  Still using Gemini 2.5
+
+---
+Back in aistudio.google.com 
+
+---
+You are an expert in User Interface Design.  Brainstorm and Implement five things that would make this probability distribution applet more useful and incredible.
