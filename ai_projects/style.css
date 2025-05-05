@@ -1,0 +1,320 @@
+/* --- Base & Reset --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: Helvetica, Arial, sans-serif;
+    color: #333;
+    background-color: #f4f7f9; /* Light background for the page */
+    font-size: 16px;
+    line-height: 1.5;
+    overflow: hidden; /* Prevent body scrollbars when frames are full */
+}
+
+a {
+    text-decoration: none;
+    color: inherit; /* Inherit color by default, override specifically */
+    transition: color 0.3s ease;
+}
+
+iframe {
+    display: block; /* Remove potential bottom space */
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* --- Layout Structure --- */
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Full viewport height */
+}
+
+header {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #ffffff; /* White header background */
+    border-bottom: 1px solid #dde3e8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 10; /* Keep header above content */
+}
+
+header h1 {
+    margin-left: 15px;
+    font-size: 1.4em;
+    color: #183147; /* Use sidebar bg color for contrast */
+    font-weight: 600;
+}
+
+.logo-link {
+    display: inline-block; /* Allows setting height */
+    line-height: 0; /* Prevent extra space */
+}
+
+.logo {
+    height: 40px; /* Adjust as needed */
+    width: auto;
+    display: block;
+}
+
+.main-content {
+    display: flex;
+    flex: 1; /* Takes remaining vertical space */
+    overflow: hidden; /* Prevent overflow issues during transitions */
+    position: relative; /* For positioning toggle buttons */
+}
+
+/* --- Sidebar (#sidebar) --- */
+#sidebar {
+    width: 250px; /* Initial width */
+    background-color: #183147; /* Requested background */
+    color: #e6edf3; /* Requested text color */
+    padding: 20px;
+    overflow-y: auto; /* Scroll if content overflows */
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth transition */
+    position: relative; /* Context for its toggle button */
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
+}
+
+#sidebar h2 {
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #3a5a78; /* Subtle separator */
+    padding-bottom: 10px;
+}
+
+#sidebar ul {
+    list-style: none;
+}
+
+#sidebar li {
+    margin-bottom: 5px;
+}
+
+#sidebar a {
+    display: block;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 0.95em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#sidebar a:hover {
+    background-color: #2c4a68; /* Slightly lighter background on hover */
+    color: #ffffff;
+}
+
+#sidebar a.active {
+    background-color: #007bff; /* Highlight active applet */
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* --- Content Wrapper (Main + Prompts) --- */
+.content-wrapper {
+    flex: 1; /* Takes remaining horizontal space */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Important for contained scrolling */
+    background-color: #ffffff; /* Background for the main area */
+}
+
+/* --- Main Applet Area (#main-applet-area) --- */
+#main-applet-area {
+    flex: 1; /* Takes remaining vertical space */
+    overflow: hidden; /* Contained iframe */
+    border-bottom: 1px solid #dde3e8; /* Separator */
+    position: relative; /* Needed if adding overlays/controls inside */
+}
+
+/* --- Prompt Area (#prompt-area) --- */
+#prompt-area {
+    height: 250px; /* Initial height */
+    background-color: #f8f9fa; /* Slightly different background */
+    border-top: 1px solid #dde3e8; /* Separator above */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Contains iframe, handles transition */
+    transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), border 0.4s ease;
+    position: relative; /* Context for its toggle button */
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+#prompt-area iframe {
+    flex: 1; /* Allow iframe to fill space */
+    background-color: #ffffff; /* White background for text content */
+    padding: 15px; /* Padding inside the iframe content (apply within the prompt file or use JS if needed) */
+    font-family: monospace; /* Good for code/prompts */
+    font-size: 0.9em;
+    color: #333;
+}
+/* Style the prompt text iframe content (if it's plain text) */
+/* Note: You can't directly style iframe content from parent CSS if it's from a different origin.
+   If prompts.txt is same-origin, you could potentially inject styles with JS,
+   or better, wrap the text in a minimal HTML file with basic styling.
+   Let's assume prompts.txt will be displayed as plain text for now. */
+
+
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    background-color: #e9ecef; /* Header background for prompts */
+    border-bottom: 1px solid #dde3e8;
+}
+
+.prompt-header h2 {
+    font-size: 1em;
+    color: #495057;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* --- Toggle Buttons --- */
+.toggle-button {
+    position: absolute;
+    z-index: 5;
+    background-color: #183147; /* Match sidebar */
+    color: #e6edf3;
+    border: none;
+    padding: 8px 5px;
+    cursor: pointer;
+    font-size: 1.2em;
+    line-height: 1;
+    border-radius: 0 4px 4px 0; /* Rounded right side */
+    transition: background-color 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.toggle-button:hover {
+    background-color: #2c4a68;
+}
+
+.sidebar-toggle {
+    top: 50%;
+    right: -25px; /* Initially positioned outside */
+    transform: translateY(-50%);
+    padding: 15px 5px; /* Taller */
+    border-radius: 0 8px 8px 0;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.prompts-toggle {
+    /* Positioned within the prompt header */
+    position: static; /* Override absolute positioning */
+    background-color: transparent;
+    color: #495057;
+    box-shadow: none;
+    padding: 0 5px;
+    font-size: 1.5em; /* Make arrow bigger */
+}
+.prompts-toggle:hover {
+    color: #007bff;
+    background-color: transparent;
+}
+
+/* --- Toggled States --- */
+body.sidebar-hidden #sidebar {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    overflow: hidden;
+}
+
+body.sidebar-hidden .sidebar-toggle {
+    right: 0; /* Bring button into view */
+    transform: translateY(-50%) scaleX(-1); /* Flip arrow */
+    border-radius: 8px 0 0 8px; /* Flip border radius */
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1); /* Flip shadow */
+}
+
+body.prompts-hidden #prompt-area {
+    height: 41px; /* Only show header */
+    /* height: 0; */ /* If hiding completely */
+    /* padding-top: 0; */
+    /* padding-bottom: 0; */
+    border-top-width: 1px;
+    overflow: hidden;
+}
+
+body.prompts-hidden #prompt-area iframe {
+     display: none; /* Hide iframe content completely when collapsed */
+}
+
+
+body.prompts-hidden .prompts-toggle {
+     transform: scaleY(-1); /* Flip arrow */
+}
+
+/* --- Footer --- */
+footer {
+    padding: 15px 25px;
+    background-color: #e9ecef; /* Match prompt header bg */
+    border-top: 1px solid #dde3e8;
+    color: #495057; /* Darker text for footer */
+    font-size: 0.85em;
+    flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px; /* Optional: Max width for content */
+    margin: 0 auto;
+}
+
+.footer-content a {
+    color: #007bff; /* Standard link blue */
+    margin-left: 15px;
+}
+
+.footer-content a:hover {
+    text-decoration: underline;
+}
+
+.footer-links {
+    text-align: right;
+}
+
+/* --- Flair & Modern Touches --- */
+body {
+    transition: background-color 0.3s ease; /* Smooth background transitions if needed */
+}
+
+/* Add subtle shadows for depth */
+#sidebar {
+    box-shadow: 3px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Responsiveness (Basic Example) --- */
+@media (max-width: 768px) {
+    #sidebar {
+        /* Consider hiding sidebar by default on smaller screens */
+        /* Or make it narrower */
+        width: 200px;
+    }
+
+    header h1 {
+        font-size: 1.2em;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .footer-links {
+        text-align: center;
+        margin-top: 5px;
+    }
+    .footer-links a {
+        margin: 0 8px;
+    }
+}

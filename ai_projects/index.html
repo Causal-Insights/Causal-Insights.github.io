@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Causal Insight - Web Applets</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="assets/logo-dark.jpg"> <!-- Optional: Favicon -->
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="https://causalinsights.io" target="_blank" class="logo-link">
+                <img src="assets/logo-dark.jpg" alt="Causal Insight Logo" class="logo">
+            </a>
+            <h1>Web Applet Showcase</h1>
+            <!-- Optional: Add more header elements if needed -->
+        </header>
+
+        <div class="main-content">
+            <!-- ================== SIDEBAR ================== -->
+            <aside id="sidebar">
+                <h2>Applets</h2>
+                <ul id="applet-list">
+                    <!-- ****** MODIFY HERE: Add new applet links ****** -->
+                    <!-- Add list items (<li>) for each new applet.
+                         Structure:
+                         <li><a href="#" data-applet-src="applets/APPLET_FILE.html" data-prompt-src="prompts/APPLET_PROMPTS.txt">Applet Name</a></li>
+                    -->
+                    <li><a href="#" class="applet-link active" data-applet-src="applets/garden_box_gemini.html" data-prompt-src="prompts/garden_box_prompts.txt">Garden Box Planner</a></li>
+                    <li><a href="#" class="applet-link" data-applet-src="applets/another_applet.html" data-prompt-src="prompts/another_applet_prompts.txt">Another Applet</a></li>
+                    <!-- ****** END MODIFY HERE ****** -->
+                </ul>
+                <button id="toggle-sidebar" class="toggle-button sidebar-toggle" title="Toggle Sidebar">‹</button>
+            </aside>
+
+            <!-- ================== MAIN AREA + PROMPTS WRAPPER ================== -->
+            <div class="content-wrapper">
+                <!-- ================== MAIN APPLET DISPLAY ================== -->
+                <main id="main-applet-area">
+                    <iframe id="applet-iframe" src="applets/garden_box_gemini.html" frameborder="0" title="Web Applet Display">
+                        <!-- ****** MODIFY HERE: Set initial applet if needed ****** -->
+                        <!-- The src will be updated by JavaScript when links are clicked. -->
+                        <!-- You can set a default welcome page here if desired -->
+                    </iframe>
+                </main>
+
+                <!-- ================== BOTTOM PROMPT AREA ================== -->
+                <section id="prompt-area">
+                     <div class="prompt-header">
+                        <h2>Prompts / Code</h2>
+                        <button id="toggle-prompts" class="toggle-button prompts-toggle" title="Toggle Prompts Area">⌄</button>
+                     </div>
+                    <iframe id="prompt-iframe" src="prompts/garden_box_prompts.txt" frameborder="0" title="Prompts Display">
+                         <!-- ****** MODIFY HERE: Set initial prompt file if needed ****** -->
+                         <!-- The src will be updated by JavaScript. Set a default here. -->
+                    </iframe>
+                </section>
+            </div>
+        </div>
+
+        <!-- ================== FOOTER ================== -->
+        <footer>
+            <div class="footer-content">
+                <span>
+                    © <span id="current-year"></span> <a href="https://causalinsights.io" target="_blank">Causal Insight</a>. All Rights Reserved.
+                </span>
+                <span class="footer-links">
+                     <a href="https://github.com/causal-insights" target="_blank">GitHub</a>
+                     <!-- Add other links if needed -->
+                </span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

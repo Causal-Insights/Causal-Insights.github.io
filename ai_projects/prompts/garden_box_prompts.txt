@@ -1,0 +1,29 @@
+Model:  Google Gemini 2.5 Pro Preview 03-25
+
+---
+Create a gardening web applet that lets a user build a garden box and place plants at the appropriate spacings.  Please consider the following things:
+
+User can move line segments to design a garden box
+User can drag and drop various plants into the garden box.  Each plant must be a certain distance from other plants.
+Populate the plant spacings by various known spacings for various species.
+Provide calculations for the amount of soils and mulch needed to properly fill the garden box.
+Label each line segment with Length (Feet & Inches)
+Allow for adding additional line segments.
+Add plants, including zucchini, cherry tomatoes, cucumber, peppers, onions, basil, kale, rosemary, marigolds.
+Show all the available plants in a single list using a name and iconography.  Keep them displayed on the side tab and allow the user to drag and drop them into place.
+When the plant is placed down, keep a label for which plant is there
+Do research for how much space each plant needs.
+Place the recommended spacing for each plant, beside them in the side bar.  That way you know how much space each plant needs.
+Have a running total of available square-footage for planting more things.  That way we know how much space is available for adding new plants.
+Make it interactive. Use Three.js. Use JS, CSS and HTM in a single HTML file.
+---
+
+Add the following:
+Create a footprint of for area occupied by each plant.  Plants areas can overlapp, but create a visual way of showing that.
+Allow the user to pick-up and move a plant to a new location once it is placed.
+Allow the user to delete a plant once it is placed.
+Allow the user to place plants that overlap, just show it in the app.
+
+---
+
+The functionality is fantastic.  Now let's focus on the design and user experience.  Independently brainstorm and implement 3 features to improve the overall look and feel of this application.
