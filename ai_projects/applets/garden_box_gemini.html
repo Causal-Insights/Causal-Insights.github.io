@@ -126,6 +126,12 @@
         const HOVER_BRIGHTNESS_FACTOR = 0.3; // How much brighter on hover
         const DELETE_MODE_TINT_COLOR = new THREE.Color(0xff0000); // Red tint for delete mode
         const DELETE_MODE_TINT_INTENSITY = 0.3; // Intensity of red tint
+        
+        // Zoom configuration
+        const MIN_ZOOM = 0.5;  // Maximum zoom out (smaller number = more zoomed out)
+        const MAX_ZOOM = 3.0;  // Maximum zoom in
+        const ZOOM_SPEED = 0.1;
+        let currentZoom = 1.0;
 
         // --- Plant Library (same as before) ---
          const PLANT_LIBRARY = [
@@ -257,15 +263,51 @@
             updateSegmentLabels();
         }
 
-        function setupEventListeners() { // Same as before
+        function setupEventListeners() {
             canvasContainer.addEventListener('pointerdown', onPointerDown);
             canvasContainer.addEventListener('pointermove', onPointerMove);
             canvasContainer.addEventListener('pointerup', onPointerUp);
-            canvasContainer.addEventListener('pointerleave', onPointerUp); // Handle leaving canvas
-            canvasContainer.addEventListener('dragover', (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
+            canvasContainer.addEventListener('pointerleave', onPointerUp);
+            canvasContainer.addEventListener('dragover', (event) => { 
+                event.preventDefault(); 
+                event.dataTransfer.dropEffect = 'copy'; 
+            });
             canvasContainer.addEventListener('drop', onDrop);
             window.addEventListener('resize', onWindowResize);
             soilDepthInputElement.addEventListener('input', updateCalculations);
+            
+            // Add wheel event listener for zoom
+            canvasContainer.addEventListener('wheel', onWheel, { passive: false });
+        }
+
+        function onWheel(event) {
+            event.preventDefault();
+            
+            // Determine zoom direction
+            const delta = -Math.sign(event.deltaY);
+            const zoomFactor = 1 + (delta * ZOOM_SPEED);
+            
+            // Calculate new zoom level
+            const newZoom = currentZoom * zoomFactor;
+            
+            // Clamp zoom level between min and max
+            if (newZoom >= MIN_ZOOM && newZoom <= MAX_ZOOM) {
+                currentZoom = newZoom;
+                
+                // Update camera zoom
+                const aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+                const frustumSize = (20 * FEET_TO_WORLD_UNITS) / currentZoom;
+                
+                camera.left = frustumSize * aspect / -2;
+                camera.right = frustumSize * aspect / 2;
+                camera.top = frustumSize / 2;
+                camera.bottom = frustumSize / -2;
+                camera.updateProjectionMatrix();
+                
+                // Update labels since the view has changed
+                updateSegmentLabels();
+                updatePlantLabels();
+            }
         }
 
         // --- Drawing Functions ---

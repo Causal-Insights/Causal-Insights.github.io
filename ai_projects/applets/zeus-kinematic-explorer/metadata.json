@@ -1,0 +1,6 @@
+
+{
+  "name": "ZEUS Kinematic Explorer",
+  "description": "An interactive particle physics visualization demonstrating how Initial State Radiation (ISR) events in the ZEUS experiment allow physicists to probe the proton structure in kinematic regions (low Q², low x) that are otherwise inaccessible.",
+  "requestFramePermissions": []
+}
