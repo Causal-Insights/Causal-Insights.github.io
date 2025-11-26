@@ -34,21 +34,27 @@ const KinematicPlane: React.FC<Props> = ({ events }) => {
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload as PhysicsEvent;
+      const data = payload[0].payload;
+      
+      // Guard clause: If it's a kinematic limit point (no 'y' property), don't show tooltip
+      if (typeof data.y === 'undefined') return null;
+
+      const eventData = data as PhysicsEvent;
+
       return (
         <div className="bg-slate-900 border border-slate-700 p-3 rounded shadow-xl text-xs z-50">
           <p className="font-bold text-slate-200 mb-1 border-b border-slate-700 pb-1">
-            {data.isISR ? 'ISR Event (Reduced Energy)' : `${data.beamEnergy} Standard DIS`}
+            {eventData.isISR ? 'ISR Event (Reduced Energy)' : `${eventData.beamEnergy} Standard DIS`}
           </p>
           <div className="space-y-1">
-            <p><span className="text-slate-500">Q²:</span> <span className="text-blue-400">{data.Q2.toFixed(1)} GeV²</span></p>
-            <p><span className="text-slate-500">x:</span> <span className="text-green-400">{data.x.toExponential(2)}</span></p>
-            <p><span className="text-slate-500">y:</span> <span className="text-purple-400">{data.y.toFixed(3)}</span></p>
-            {data.isISR && (
+            <p><span className="text-slate-500">Q²:</span> <span className="text-blue-400">{eventData.Q2?.toFixed(1)} GeV²</span></p>
+            <p><span className="text-slate-500">x:</span> <span className="text-green-400">{eventData.x?.toExponential(2)}</span></p>
+            <p><span className="text-slate-500">y:</span> <span className="text-purple-400">{eventData.y?.toFixed(3)}</span></p>
+            {eventData.isISR && (
               <>
                 <p className="mt-2 text-yellow-500 font-semibold">ISR Photon:</p>
-                <p>E_gamma: {data.E_gamma.toFixed(1)} GeV</p>
-                <p>√s_eff: {Math.sqrt(data.s).toFixed(1)} GeV</p>
+                <p>E_gamma: {eventData.E_gamma?.toFixed(1)} GeV</p>
+                <p>√s_eff: {eventData.s ? Math.sqrt(eventData.s).toFixed(1) : ''} GeV</p>
               </>
             )}
           </div>
@@ -58,9 +64,10 @@ const KinematicPlane: React.FC<Props> = ({ events }) => {
     return null;
   };
 
-  // explicit ticks for log scales to ensure clean integer exponents
+  // Explicit ticks to force integer exponents on the Log plot
+  // This prevents labels like 10^2.3
   const xTicks = [0.00001, 0.0001, 0.001, 0.01, 0.1, 1];
-  const yTicks = [1, 10, 100, 1000, 10000, 100000];
+  const yTicks = [1, 10, 100, 1000, 10000, 50000];
 
   return (
     <div className="w-full h-[500px] bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-lg flex flex-col">
@@ -101,7 +108,11 @@ const KinematicPlane: React.FC<Props> = ({ events }) => {
               scale="log" 
               domain={[1, 50000]} 
               ticks={yTicks}
-              tickFormatter={(val) => `10^${Math.round(Math.log10(val))}`}
+              tickFormatter={(val) => {
+                // Special handling for the top tick to look clean
+                if (val === 50000) return ""; 
+                return `10^${Math.round(Math.log10(val))}`;
+              }}
               stroke="#64748b"
               allowDataOverflow
             >

@@ -140,11 +140,11 @@ const DetectorVisualization: React.FC<Props> = ({ activeEvent }) => {
               strokeWidth="2"
               opacity="0.5"
             />
-            {/* Particle Head */}
+            {/* Particle Head - Reduced sizes here (5 for photon, 3 for others) */}
             <circle 
               cx={p.x} 
               cy={p.y} 
-              r={p.type === ParticleType.PHOTON ? 6 : 3} 
+              r={p.type === ParticleType.PHOTON ? 5 : 3} 
               fill={
                 p.type === ParticleType.ELECTRON ? '#ef4444' : 
                 p.type === ParticleType.HADRON ? '#22c55e' : 
